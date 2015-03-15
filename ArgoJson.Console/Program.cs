@@ -64,6 +64,7 @@ namespace ArgoJson.Console
         static void BenchArgoJsonLarge(ICollection<School> schools)
         {
             ArgoJson.Serializer.Serialize(schools);
+            //File.WriteAllText("output.dat", ArgoJson.Serializer.Serialize(schools));
         }
 
         static void BenchArgoJsonSmall(ICollection<School> schools)
