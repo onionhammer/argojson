@@ -63,7 +63,7 @@ namespace ArgoJson.Console
 
         static void BenchArgoJsonLarge(ICollection<School> schools)
         {
-            ArgoJson.Serializer.Serialize(schools);
+            ArgoJson.Serializer.Serialize(schools.First());
         }
 
         static void BenchArgoJsonSmall(ICollection<School> schools)

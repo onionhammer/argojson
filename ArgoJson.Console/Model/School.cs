@@ -14,8 +14,10 @@ namespace ArgoJson.Console.Model
 
         public string Name { get; set; }
 
+        [JsonIgnore]
         public List<Employee> Staff { get; set; }
 
+        [JsonIgnore]
         public List<Student> Students { get; set; }
     }
 }
