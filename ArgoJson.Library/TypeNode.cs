@@ -116,8 +116,8 @@ namespace ArgoJson
             var parentVar      = Expression.Variable(owner);
             var subType        = generic.GetGenericArguments()[0];
             var subTypeHash    = subType.GetHashCode();
-            var enumerator     = Expression.Parameter(typeof(IEnumerator<>).MakeGenericType(subType));
             var enumeratorType = typeof(IEnumerator<>).MakeGenericType(subType);
+            var enumerator     = Expression.Parameter(enumeratorType);
 
             // Get properties / methods
             var GetEnumerator = generic.GetMethod("GetEnumerator");
@@ -157,9 +157,6 @@ namespace ArgoJson
                 Expression.Assign(enumerator, Expression.Call(parentVar, GetEnumerator))
             );
 
-            // if $var1.MoveNext() == true
-            var test = Expression.Equal(Expression.Call(enumerator, MoveNext), Expression.Constant(true));
-
             // {ienumerator}.Current
             var getter = Expression.PropertyOrField(enumerator, "Current");
 
@@ -172,13 +169,13 @@ namespace ArgoJson
                 comma);
 
             var ifElse = Expression.IfThenElse(
-                test,                                                            // if (...)
+                Expression.Call(enumerator, MoveNext),                           // if (...)
                 Expression.Block(                                                // {
                     checkComma,                                                  //      if (isFirst == false) {comma}
                     Expression.Assign(isFirstParam, Expression.Constant(false)), //      isFirst = false;
                     blockBody                                                    //      {blockBody}
-                ),                              // }
-                Expression.Goto(endLoop)        // else break;
+                ),                                                               // }
+                Expression.Goto(endLoop)                                         // else break;
             );
 
             expressions.Add(Expression.Loop(ifElse, endLoop, Expression.Label()));
@@ -201,6 +198,45 @@ namespace ArgoJson
             );
         }
 
+        //private static Expression<Action<object, StringWriter>> BuildArraySerializerForCollection(Type type, Type subType)
+        //{
+        //    // Build body of lambda
+        //    var body = Expression.Block(
+        //        declarations,
+        //        expressions
+        //    );
+
+        //    return Expression.Lambda<Action<object, StringWriter>>(
+        //        body,
+        //        parentParam, writerParam
+        //    );
+        //}
+
+        private static Expression<Action<object, StringWriter>> BuildArraySerializerForArray(Type owner, Type subType)
+        {
+            var parentParam    = Expression.Parameter(typeof(object));
+            var writerParam    = Expression.Parameter(typeof(StringWriter));
+            var parentVar      = Expression.Variable(owner);
+
+            var declarations = new List<ParameterExpression>(capacity: 20) {
+                parentVar
+            };
+
+            var expressions = new List<Expression>(capacity: 20) {
+            };
+
+            // Build body of lambda
+            var body = Expression.Block(
+                declarations,
+                expressions
+            );
+
+            return Expression.Lambda<Action<object, StringWriter>>(
+                body,
+                parentParam, writerParam
+            );
+        }
+
         internal TypeNode(Type type)
         {
             bool nullable = false;
@@ -215,7 +251,7 @@ namespace ArgoJson
                         if (nullable)
                             _expression = (value, writer) => writer.Write(value == null ? "null" : (bool)value ? "true" : "false");
                         else
-                            _expression = (value, writer) => writer.Write((bool)value ? "true" : "false");
+                            _expression = (value, writer) => writer.Write((bool)value);
                         break;
 
                     default:
@@ -259,9 +295,13 @@ namespace ArgoJson
                         break;
 
                     default:
-                        Type ienumerableT;
-                        if (type.IsGenericType && Helpers.IsIEnumerableT(type, out ienumerableT))
-                            _expression = BuildArraySerializerForIter(type, ienumerableT);
+                        Type subType;
+                        if (type.IsArray)
+                            _expression = BuildArraySerializerForArray(type, type.GetElementType());
+                        //if (type.IsGenericType && type.IsOfGeneric(typeof(ICollection<>), out subType))
+                        //    _expression = BuildArraySerializerForCollection(type, subType);
+                        if (type.IsGenericType && type.IsOfGeneric(typeof(IEnumerable<>), out subType))
+                            _expression = BuildArraySerializerForIter(type, subType);
                         else
                             _expression = BuildObjectSerializer(type);
                         break;
@@ -270,6 +310,5 @@ namespace ArgoJson
             
             _serialize = _expression.Compile();
         }
-
     }
 }

@@ -54,7 +54,7 @@ namespace ArgoJson.Console
                 {
                     Id       = rand.NextGuid(),
                     Name     = rand.NextString(8, 15),
-                    Staff    = GetEmployees(rand).ToList(),
+                    Staff    = GetEmployees(rand).ToArray(),
                     Students = GetStudents(rand).ToList()
                 };
         }

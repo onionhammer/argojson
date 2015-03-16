@@ -43,7 +43,7 @@ namespace ArgoJson
             return result.ToString();
         }
 
-        public static bool IsIEnumerableT(Type type, out Type generic)
+        public static bool IsOfGeneric(this Type type, Type interfaceType, out Type subType)
         {
             var interfaces = type.GetInterfaces();
 
@@ -51,14 +51,14 @@ namespace ArgoJson
             {
                 var iface = interfaces[i];
 
-                if (iface.IsGenericType && iface.GetGenericTypeDefinition() == typeof(IEnumerable<>))
+                if (iface.IsGenericType && iface.GetGenericTypeDefinition() == interfaceType)
                 {
-                    generic = iface;
+                    subType = iface;
                     return true;
                 }
             }
 
-            generic = null;
+            subType = null;
             return false;
         }
 

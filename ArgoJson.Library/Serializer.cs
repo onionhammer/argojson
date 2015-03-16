@@ -41,7 +41,7 @@ namespace ArgoJson
             // TODO - Perform simple heuristics to determine
             // starting size & buffering
 
-            var builder = new StringBuilder(64);
+            var builder = new StringBuilder(256);
             using (var sw = new StringWriter(builder))
                 node._serialize(value, sw);
             
