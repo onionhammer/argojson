@@ -2,14 +2,17 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 
 namespace ArgoJson.Console
 {
     class Program
     {
+        #region Delegates
+
         delegate void Bench(ICollection<School> schools);
+
+        #endregion
 
         #region Test Data Generators
 
@@ -26,7 +29,6 @@ namespace ArgoJson.Console
                     Email       = rand.NextString(8, 18)
                 };
         }
-
 
         private static IEnumerable<Student> GetStudents(Random rand)
         {
@@ -47,7 +49,7 @@ namespace ArgoJson.Console
             const int SEED = 0x1e5;
             var rand = new Random(SEED);
 
-            for (int i = 0, numSchools = rand.Next(200, 400); i < numSchools; ++i)
+            for (int i = 0, numSchools =  rand.Next(200, 400); i < numSchools; ++i)
                 yield return new School
                 {
                     Id       = rand.NextGuid(),
@@ -63,8 +65,7 @@ namespace ArgoJson.Console
 
         static void BenchArgoJsonLarge(ICollection<School> schools)
         {
-            //ArgoJson.Serializer.Serialize(schools);
-            File.WriteAllText("output.dat", ArgoJson.Serializer.Serialize(schools));
+            ArgoJson.Serializer.Serialize(schools);
         }
 
         static void BenchArgoJsonSmall(ICollection<School> schools)
@@ -152,23 +153,29 @@ namespace ArgoJson.Console
                 BenchArgoJsonSmall,
                 BenchJSONDotNetLarge,
                 BenchJSONDotNetSmall,
-                BenchDataContractLarge,
-                BenchDataContractSmall,
                 BenchServiceStackLarge,
-                BenchServiceStackSmall
+                BenchServiceStackSmall,
+                // BenchDataContractLarge,
+                // BenchDataContractSmall
             };
 
+            GC.Collect();
             for (var i = 0; i < operations.Length; ++i)
             {
                 var operationName = operations[i].Method.Name;
                 System.Console.Write("Benching {0}... ", operationName);
+                
                 var stopwatch = new Stopwatch();
                 {
                     stopwatch.Start();
                     operations[i](allSchools);
                     stopwatch.Stop();
+
+                    GC.Collect();
                 }
-                System.Console.WriteLine("{0}s", stopwatch.ElapsedMilliseconds / 1000.0);
+
+                System.Console.WriteLine("{0}s", 
+                    stopwatch.ElapsedMilliseconds / 1000.0);
             }
         }
     }
