@@ -61,7 +61,7 @@ namespace ArgoJson
                 var ignored      = prop.GetCustomAttribute(typeof(JsonIgnoreAttribute));
                 
                 // This property is ignored
-                if (ignored != null) 
+                if (ignored != null || prop.PropertyType == typeof(object)) 
                     continue;
 
                 if (commaAt++ > 0)
