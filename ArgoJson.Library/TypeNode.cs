@@ -20,20 +20,18 @@ namespace ArgoJson
         static MethodInfo MoveNext = typeof(IEnumerator)
             .GetMethod("MoveNext");
 
-        internal delegate void SerializeValue(object value, StringWriter writer);
-
         #endregion
         
         #region Fields
 
         internal readonly Expression<Action<object, StringWriter>> _expression;
 
-        //internal readonly Delegate _serialize;
-
         internal readonly Action<object, StringWriter> _serialize;
 
         #endregion
-        
+
+        #region Serializers
+
         static Expression<Action<object, StringWriter>> BuildObjectSerializer(Type owner)
         {
             // Get properties
@@ -48,7 +46,7 @@ namespace ArgoJson
 
             var comma = Expression.Call(writerParam, WriteChar, Expression.Constant(','));
 
-            var expressions = new List<Expression>(capacity: props.Length + 1) {
+            var expressions = new List<Expression>(capacity: props.Length * 3) {
                 // "var parent = ({type})parentObj;"
                 Expression.Assign(parentVar, Expression.Convert(parentParam, owner)),
                 
@@ -134,7 +132,7 @@ namespace ArgoJson
                 parentVar, enumerator, isFirstParam
             };
 
-            var expressions = new List<Expression>(capacity: 20) {
+            var expressions = new List<Expression>(capacity: 15) {
                 // "var parent = ({type})parentObj;"
                 Expression.Assign(parentVar, Expression.Convert(parentParam, owner)),
 
@@ -205,7 +203,7 @@ namespace ArgoJson
             );
         }
 
-        private static Expression<Action<object, StringWriter>> BuildArraySerializerForList(Type owner, Type generic)
+        static Expression<Action<object, StringWriter>> BuildArraySerializerForList(Type owner, Type generic)
         {
             var parentParam = Expression.Parameter(typeof(object));
             var writerParam = Expression.Parameter(typeof(StringWriter));
@@ -221,7 +219,7 @@ namespace ArgoJson
                 parentVar, iParam, lengthParam
             };
 
-            var expressions = new List<Expression>(capacity: 20) {
+            var expressions = new List<Expression>(capacity: 6) {
                 // "var parent = ({type})parentObj;"
                 Expression.Assign(parentVar, Expression.Convert(parentParam, owner)),
 
@@ -291,11 +289,11 @@ namespace ArgoJson
             );
         }
 
-        private static Expression<Action<object, StringWriter>> BuildArraySerializerForArray(Type owner, Type subType)
+        static Expression<Action<object, StringWriter>> BuildArraySerializerForArray(Type owner, Type subType)
         {
-            var parentParam    = Expression.Parameter(typeof(object));
-            var writerParam    = Expression.Parameter(typeof(StringWriter));
-            var parentVar      = Expression.Variable(owner);
+            var parentParam = Expression.Parameter(typeof(object));
+            var writerParam = Expression.Parameter(typeof(StringWriter));
+            var parentVar   = Expression.Variable(owner);
 
             var iParam      = Expression.Parameter(typeof(int));
             var lengthParam = Expression.Parameter(typeof(int));
@@ -305,7 +303,7 @@ namespace ArgoJson
                 parentVar, iParam, lengthParam
             };
 
-            var expressions = new List<Expression>(capacity: 20) {
+            var expressions = new List<Expression>(capacity: 6) {
                 // "var parent = ({type})parentObj;"
                 Expression.Assign(parentVar, Expression.Convert(parentParam, owner)),
 
@@ -345,8 +343,8 @@ namespace ArgoJson
                 comma);
 
             var ifStmt = Expression.IfThen(
-                Expression.Equal(iParam, lengthParam),                           // if (i == length)
-                Expression.Break(endLoop)                                        //     break;
+                Expression.Equal(iParam, lengthParam),                       // if (i == length)
+                Expression.Break(endLoop)                                    //     break;
             );
 
             var loopBody = Expression.Block(
@@ -374,6 +372,10 @@ namespace ArgoJson
                 parentParam, writerParam
             );
         }
+
+        #endregion
+
+        #region Constructor
 
         internal TypeNode(Type type)
         {
@@ -449,5 +451,7 @@ namespace ArgoJson
             _serialize = Helpers.CompileToType(type, _expression) 
                 as Action<object, StringWriter>;
         }
+
+        #endregion
     }
 }
