@@ -40,7 +40,7 @@ namespace ArgoJson
             var writerParam = Expression.Parameter(typeof(StringWriter));
             var parentVar   = Expression.Variable(owner);
 
-            var declarations = new List<ParameterExpression>(capacity: props.Length) {
+            ParameterExpression[] declarations = {
                 parentVar
             };
 
@@ -54,7 +54,8 @@ namespace ArgoJson
                 Expression.Call(writerParam, WriteChar, Expression.Constant('{'))
             };
 
-            for (int i = 0, commaAt = 0; i < props.Length; ++i)
+            var isFirst = true;
+            for (int i = 0; i < props.Length; ++i)
             {
                 var prop         = props[i];
                 var propTypeHash = prop.PropertyType.GetHashCode();
@@ -64,8 +65,11 @@ namespace ArgoJson
                 if (ignored != null || prop.PropertyType == typeof(object)) 
                     continue;
 
-                if (commaAt++ > 0)
+                if (isFirst == false)
+                {
                     expressions.Add(comma);
+                    isFirst = false;
+                }
 
                 // Attempt to find handling type
                 TypeNode node;
@@ -112,18 +116,19 @@ namespace ArgoJson
         {
             var parentParam    = Expression.Parameter(typeof(object));
             var writerParam    = Expression.Parameter(typeof(StringWriter));
-            var isFirstParam   = Expression.Parameter(typeof(bool));
             var parentVar      = Expression.Variable(owner);
+
+            var isFirstParam   = Expression.Parameter(typeof(bool));
             var subType        = generic.GetGenericArguments()[0];
+            var GetEnumerator  = generic.GetMethod("GetEnumerator");
             var subTypeHash    = subType.GetHashCode();
             var enumeratorType = typeof(IEnumerator<>).MakeGenericType(subType);
             var enumerator     = Expression.Parameter(enumeratorType);
 
             // Get properties / methods
-            var GetEnumerator = generic.GetMethod("GetEnumerator");
-            var Dispose       = Helpers.GetDispose(enumeratorType);
+            var Dispose = Helpers.GetDispose(enumeratorType);
 
-            var declarations = new List<ParameterExpression>(capacity: 20) {
+            ParameterExpression[] declarations = {
                 parentVar, enumerator, isFirstParam
             };
 
@@ -135,7 +140,10 @@ namespace ArgoJson
                 Expression.Assign(isFirstParam, Expression.Constant(true)),
                 
                 // "["
-                Expression.Call(writerParam, WriteChar, Expression.Constant('['))
+                Expression.Call(writerParam, WriteChar, Expression.Constant('[')),
+
+                // "var enumerator = parent.GetEnumerator()"
+                Expression.Assign(enumerator, Expression.Call(parentVar, GetEnumerator))
             };
 
             var comma = Expression.Call(writerParam, WriteChar, Expression.Constant(','));
@@ -153,29 +161,26 @@ namespace ArgoJson
 
             // Iterate through all members and add them
             var endLoop = Expression.Label();
-            expressions.Add(
-                Expression.Assign(enumerator, Expression.Call(parentVar, GetEnumerator))
-            );
 
-            // {ienumerator}.Current
-            var getter = Expression.PropertyOrField(enumerator, "Current");
-
-            // Visit node expression
-            var blockBody = new ChildVisitor(writerParam, Expression.Convert(getter, typeof(object)))
+            // Swap {ienumerator}.Current for value in expression
+            var currentExpr = Expression.PropertyOrField(enumerator, "Current");
+            var blockBody   = new ChildVisitor(writerParam, Expression.Convert(currentExpr, typeof(object)))
                 .Visit(node._expression.Body);
 
             var checkComma = Expression.IfThen(
-                Expression.Equal(isFirstParam, Expression.Constant(false)), 
-                comma);
+                Expression.Not(isFirstParam),
+                Expression.Block(
+                    comma,                                                       // writer.Write(',');
+                    Expression.Assign(isFirstParam, Expression.Constant(false))  // isFirst = false;
+                ));
 
             var ifElse = Expression.IfThenElse(
                 Expression.Call(enumerator, MoveNext),                           // if (...)
                 Expression.Block(                                                // {
-                    checkComma,                                                  //      if (isFirst == false) {comma}
-                    Expression.Assign(isFirstParam, Expression.Constant(false)), //      isFirst = false;
+                    checkComma,                                                  //      if (isFirst == false) {{comma}; isFirst = false}
                     blockBody                                                    //      {blockBody}
                 ),                                                               // }
-                Expression.Goto(endLoop)                                         // else break;
+                Expression.Break(endLoop)                                        // else break;
             );
 
             expressions.Add(Expression.Loop(ifElse, endLoop, Expression.Label()));
@@ -218,12 +223,68 @@ namespace ArgoJson
             var writerParam    = Expression.Parameter(typeof(StringWriter));
             var parentVar      = Expression.Variable(owner);
 
-            var declarations = new List<ParameterExpression>(capacity: 20) {
-                parentVar
+            var iParam      = Expression.Parameter(typeof(int));
+            var subTypeHash = subType.GetHashCode();
+
+            ParameterExpression[] declarations = {
+                parentVar, iParam
             };
 
             var expressions = new List<Expression>(capacity: 20) {
+                // "var parent = ({type})parentObj;"
+                Expression.Assign(parentVar, Expression.Convert(parentParam, owner)),
+
+                // "var i = 0;
+                Expression.Assign(iParam, Expression.Constant(0)),
+
+                // "["
+                Expression.Call(writerParam, WriteChar, Expression.Constant('['))
             };
+
+            var comma = Expression.Call(writerParam, WriteChar, Expression.Constant(','));
+
+            // Attempt to find handling type
+            TypeNode node;
+            if (Serializer._types.TryGetValue(subTypeHash, out node) == false)
+            {
+                // Create a new handler for this type as it is not recognized
+                node = new TypeNode(subType);
+
+                //Add new handler for this type
+                Serializer._types.Add(subTypeHash, node);
+            }
+
+            // Iterate through all members and add them
+            var endLoop = Expression.Label();
+
+            // {parent}.Length - 1
+            var getLength = Expression.ArrayLength(parentVar);
+
+            // Swap {ienumerator}.Current for value in expression
+            var arrayAccess = Expression.ArrayAccess(parentVar, iParam);
+            var blockBody   = new ChildVisitor(writerParam, Expression.Convert(arrayAccess, typeof(object)))
+                .Visit(node._expression.Body);
+
+            var checkComma = Expression.IfThen(
+                Expression.NotEqual(iParam, Expression.Constant(0)),
+                comma);
+
+            var ifElse = Expression.IfThenElse(
+                Expression.Equal(iParam, getLength),                       // if (...)
+                Expression.Break(endLoop),                                       // {
+                Expression.Block(                                                //     if (i != 0) {{comma}}
+                    checkComma,
+                    blockBody,
+                    Expression.Assign(iParam, Expression.Increment(iParam))      // ++i
+                )                                                                // }
+            );
+
+            expressions.Add(Expression.Loop(ifElse, endLoop, Expression.Label()));
+
+            // "]"
+            expressions.Add(
+                Expression.Call(writerParam, WriteChar, Expression.Constant(']'))
+            );
 
             // Build body of lambda
             var body = Expression.Block(
@@ -300,7 +361,7 @@ namespace ArgoJson
                             _expression = BuildArraySerializerForArray(type, type.GetElementType());
                         //if (type.IsGenericType && type.IsOfGeneric(typeof(ICollection<>), out subType))
                         //    _expression = BuildArraySerializerForCollection(type, subType);
-                        if (type.IsGenericType && type.IsOfGeneric(typeof(IEnumerable<>), out subType))
+                        else if (type.IsGenericType && type.IsOfGeneric(typeof(IEnumerable<>), out subType))
                             _expression = BuildArraySerializerForIter(type, subType);
                         else
                             _expression = BuildObjectSerializer(type);
