@@ -270,11 +270,11 @@ namespace ArgoJson
                 comma);
 
             var ifElse = Expression.IfThenElse(
-                Expression.Equal(iParam, getLength),                       // if (...)
-                Expression.Break(endLoop),                                       // {
-                Expression.Block(                                                //     if (i != 0) {{comma}}
-                    checkComma,
-                    blockBody,
+                Expression.Equal(iParam, getLength),                             // if (...)
+                Expression.Break(endLoop),                                       //     break;
+                Expression.Block(                                                // else {
+                    checkComma,                                                  // if (i != 0) {{comma}}
+                    blockBody,                                                   // {body}
                     Expression.Assign(iParam, Expression.Increment(iParam))      // ++i
                 )                                                                // }
             );
