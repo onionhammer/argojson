@@ -97,6 +97,24 @@ namespace ArgoJson.Console
 
         #endregion
 
+        #region fastJSON
+
+        static void BenchFastJsonLarge(ICollection<School> schools)
+        {
+            fastJSON.JSON.ToJSON(schools);
+        }
+
+        static void BenchFastJsonSmall(ICollection<School> schools)
+        {
+            foreach (var school in schools)
+            foreach (var student in school.Students)
+            {
+                fastJSON.JSON.ToJSON(student);
+            }
+        }
+
+        #endregion
+
         #region Microsoft DataContract Serializer
 
         const int MAX_SIZE_GB = int.MaxValue;
@@ -155,6 +173,8 @@ namespace ArgoJson.Console
                 BenchJSONDotNetSmall,
                 BenchServiceStackLarge,
                 BenchServiceStackSmall,
+                BenchFastJsonLarge,
+                BenchFastJsonSmall,
                 // BenchDataContractLarge,
                 // BenchDataContractSmall
             };
