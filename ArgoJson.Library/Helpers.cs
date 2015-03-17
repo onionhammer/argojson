@@ -79,7 +79,7 @@ namespace ArgoJson
             throw new NotImplementedException();
         }
 
-        public static object CompileToType<T>(Type type,
+        public static Delegate CompileToType<T>(Type type,
             Expression<T> expression)
         {
             var typeBuilder = Serializer._assemblyModule.DefineType(

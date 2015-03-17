@@ -20,9 +20,9 @@ namespace ArgoJson.Test
         {
             var obj = new
             {
-                Name = "John Smith",
+                Name    = "John Smith",
                 Address = "1912 Franklin Ave\nApt. 221",
-                Age = 22
+                Age     = 22
             };
 
             var result = ArgoJson.Serializer.Serialize(obj);
