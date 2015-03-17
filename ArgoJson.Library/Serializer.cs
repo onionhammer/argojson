@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
+using System.Reflection.Emit;
 using System.Text;
 
 namespace ArgoJson
@@ -9,8 +11,21 @@ namespace ArgoJson
     {
         internal static readonly Dictionary<int, TypeNode> _types;
 
+        private static readonly AssemblyBuilder _assemblyBuilder;
+
+        internal static readonly ModuleBuilder _assemblyModule;
+
         static Serializer()
         {
+            // Define dynamic assembly
+            _assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(
+                new AssemblyName("ArgoJsonSerialization" + Guid.NewGuid().ToString("N")),
+                AssemblyBuilderAccess.Run
+            );
+
+            _assemblyModule = _assemblyBuilder.DefineDynamicModule("Module");
+
+            // Initialize several basic types
             _types = new Dictionary<int, TypeNode>(capacity: 32)
             {
                 { typeof(int).GetHashCode(),      new TypeNode(typeof(int)) },
@@ -46,6 +61,21 @@ namespace ArgoJson
                 node._serialize(value, sw);
             
             return builder.ToString();
+        }
+
+        public static void Save<Type>(string output)
+        {
+            var type     = typeof(Type);
+            var typeHash = type.GetHashCode();
+
+            TypeNode node;
+            if (_types.TryGetValue(typeHash, out node) == false)
+            {
+                node = new TypeNode(type);
+                _types.Add(typeHash, node);
+            }
+
+            throw new NotImplementedException();
         }
     }
 }

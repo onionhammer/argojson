@@ -28,6 +28,8 @@ namespace ArgoJson
 
         internal readonly Expression<Action<object, StringWriter>> _expression;
 
+        //internal readonly Delegate _serialize;
+
         internal readonly Action<object, StringWriter> _serialize;
 
         #endregion
@@ -368,8 +370,9 @@ namespace ArgoJson
                         break;
                 }
             }
-            
-            _serialize = _expression.Compile();
+
+            _serialize = Helpers.CompileToType(type, _expression) 
+                as Action<object, StringWriter>;
         }
     }
 }

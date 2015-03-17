@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 
 namespace ArgoJson
 {
-    internal static class Helpers
+    public static class Helpers
     {
         static char[] Illegal = { 
             '"', '\\', '/', '\b', '\f', '\n', '\r', '\t' 
@@ -75,6 +77,26 @@ namespace ArgoJson
             }
 
             throw new NotImplementedException();
+        }
+
+        public static object CompileToType<T>(Type type,
+            Expression<T> expression)
+        {
+            var typeBuilder = Serializer._assemblyModule.DefineType(
+                type.Name + "Serializer" + Guid.NewGuid().ToString("N"));
+
+            var methodBuilder = typeBuilder.DefineMethod(
+                "Serialize",
+                MethodAttributes.Public | MethodAttributes.Static);
+
+            expression.CompileToMethod(methodBuilder);
+
+            var serializerType = typeBuilder.CreateType();
+
+            return Delegate.CreateDelegate(
+                expression.Type,
+                serializerType.GetMethod("Serialize")
+            );
         }
     }
 }
