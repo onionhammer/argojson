@@ -9,49 +9,56 @@ namespace ArgoJson
 {
     public class Serializer
     {
-        internal static readonly Dictionary<int, TypeNode> _types;
+        #region Fields
+
+        internal static readonly Dictionary<Type, TypeNode> _types;
 
         private static readonly AssemblyBuilder _assemblyBuilder;
 
         internal static readonly ModuleBuilder _assemblyModule;
+
+        #endregion
+
+        #region Constructor
 
         static Serializer()
         {
             // Define dynamic assembly
             _assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(
                 new AssemblyName("ArgoJsonSerialization" + Guid.NewGuid().ToString("N")),
-                AssemblyBuilderAccess.Run
+                AssemblyBuilderAccess.RunAndSave
             );
 
             _assemblyModule = _assemblyBuilder.DefineDynamicModule("Module");
 
             // Initialize several basic types
-            _types = new Dictionary<int, TypeNode>(capacity: 32)
+            _types = new Dictionary<Type, TypeNode>(capacity: 16)
             {
-                { typeof(int).GetHashCode(),      new TypeNode(typeof(int)) },
-                { typeof(bool).GetHashCode(),     new TypeNode(typeof(bool)) },
-                { typeof(double).GetHashCode(),   new TypeNode(typeof(double)) },
-                { typeof(float).GetHashCode(),    new TypeNode(typeof(float)) },
-                { typeof(string).GetHashCode(),   new TypeNode(typeof(string)) },
-                { typeof(Guid).GetHashCode(),     new TypeNode(typeof(Guid)) },
-                { typeof(DateTime).GetHashCode(), new TypeNode(typeof(DateTime)) },
+                { typeof(int),      new TypeNode(typeof(int)) },
+                { typeof(bool),     new TypeNode(typeof(bool)) },
+                { typeof(double),   new TypeNode(typeof(double)) },
+                { typeof(float),    new TypeNode(typeof(float)) },
+                { typeof(string),   new TypeNode(typeof(string)) },
+                { typeof(Guid),     new TypeNode(typeof(Guid)) },
+                { typeof(DateTime), new TypeNode(typeof(DateTime)) },
             };
         }
+
+        protected Serializer() { }
+
+        #endregion
+
+        #region Methods
 
         public static string Serialize(object value)
         {
             if (value == null)
                 throw new ArgumentNullException("item");
             
-            var type     = value.GetType();
-            var typeHash = type.GetHashCode();
+            var type = value.GetType();
 
             TypeNode node;
-            if (_types.TryGetValue(typeHash, out node) == false)
-            {
-                node = new TypeNode(type);
-                _types.Add(typeHash, node);
-            }
+            Helpers.GetHandler(type, out node);
 
             // TODO - Perform simple heuristics to determine
             // starting size & buffering
@@ -63,19 +70,11 @@ namespace ArgoJson
             return builder.ToString();
         }
 
-        public static void Save<Type>(string output)
+        public static void SaveAssembly(string output)
         {
-            var type     = typeof(Type);
-            var typeHash = type.GetHashCode();
-
-            TypeNode node;
-            if (_types.TryGetValue(typeHash, out node) == false)
-            {
-                node = new TypeNode(type);
-                _types.Add(typeHash, node);
-            }
-
-            throw new NotImplementedException();
+            _assemblyBuilder.Save(output);
         }
+
+        #endregion
     }
 }

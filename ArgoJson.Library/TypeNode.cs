@@ -57,12 +57,12 @@ namespace ArgoJson
             var isFirst = true;
             for (int i = 0; i < props.Length; ++i)
             {
-                var prop         = props[i];
-                var propTypeHash = prop.PropertyType.GetHashCode();
-                var ignored      = prop.GetCustomAttribute(typeof(JsonIgnoreAttribute));
+                var prop     = props[i];
+                var propType = prop.PropertyType;
+                var ignored  = prop.GetCustomAttribute(typeof(JsonIgnoreAttribute));
                 
                 // This property is ignored
-                if (ignored != null || prop.PropertyType == typeof(object)) 
+                if (ignored != null || propType == typeof(object)) 
                     continue;
 
                 if (isFirst == false)
@@ -73,14 +73,7 @@ namespace ArgoJson
 
                 // Attempt to find handling type
                 TypeNode node;
-                if (Serializer._types.TryGetValue(propTypeHash, out node) == false)
-                {
-                    // Create a new handler for this type as it is not recognized
-                    node = new TypeNode(prop.PropertyType);
-
-                    //Add new handler for this type
-                    Serializer._types.Add(propTypeHash, node);
-                }
+                Helpers.GetHandler(propType, out node);
 
                 // Append serializer to expression
                 expressions.Add(Expression.Call(writerParam, WriteString,
@@ -121,7 +114,6 @@ namespace ArgoJson
             var isFirstParam   = Expression.Parameter(typeof(bool));
             var subType        = generic.GetGenericArguments()[0];
             var GetEnumerator  = generic.GetMethod("GetEnumerator");
-            var subTypeHash    = subType.GetHashCode();
             var enumeratorType = typeof(IEnumerator<>).MakeGenericType(subType);
             var enumerator     = Expression.Parameter(enumeratorType);
 
@@ -150,14 +142,7 @@ namespace ArgoJson
 
             // Attempt to find handling type
             TypeNode node;
-            if (Serializer._types.TryGetValue(subTypeHash, out node) == false)
-            {
-                // Create a new handler for this type as it is not recognized
-                node = new TypeNode(subType);
-
-                //Add new handler for this type
-                Serializer._types.Add(subTypeHash, node);
-            }
+            Helpers.GetHandler(subType, out node);
 
             // Iterate through all members and add them
             var endLoop = Expression.Label();
@@ -212,7 +197,6 @@ namespace ArgoJson
             var iParam      = Expression.Parameter(typeof(int));
             var subType     = generic.GetGenericArguments()[0];
             var lengthParam = Expression.Parameter(typeof(int));
-            var subTypeHash = subType.GetHashCode();
             var getItem     = generic.GetMethod("get_Item");
 
             ParameterExpression[] declarations = {
@@ -237,14 +221,7 @@ namespace ArgoJson
 
             // Attempt to find handling type
             TypeNode node;
-            if (Serializer._types.TryGetValue(subTypeHash, out node) == false)
-            {
-                // Create a new handler for this type as it is not recognized
-                node = new TypeNode(subType);
-
-                //Add new handler for this type
-                Serializer._types.Add(subTypeHash, node);
-            }
+            Helpers.GetHandler(subType, out node);
 
             // Iterate through all members and add them
             var endLoop = Expression.Label();
@@ -297,7 +274,6 @@ namespace ArgoJson
 
             var iParam      = Expression.Parameter(typeof(int));
             var lengthParam = Expression.Parameter(typeof(int));
-            var subTypeHash = subType.GetHashCode();
 
             ParameterExpression[] declarations = {
                 parentVar, iParam, lengthParam
@@ -321,14 +297,7 @@ namespace ArgoJson
 
             // Attempt to find handling type
             TypeNode node;
-            if (Serializer._types.TryGetValue(subTypeHash, out node) == false)
-            {
-                // Create a new handler for this type as it is not recognized
-                node = new TypeNode(subType);
-
-                //Add new handler for this type
-                Serializer._types.Add(subTypeHash, node);
-            }
+            Helpers.GetHandler(subType, out node);
 
             // Iterate through all members and add them
             var endLoop = Expression.Label();

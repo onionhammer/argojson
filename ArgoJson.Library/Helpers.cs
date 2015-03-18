@@ -45,7 +45,7 @@ namespace ArgoJson
             return result.ToString();
         }
 
-        public static bool IsOfGeneric(this Type type, Type interfaceType, out Type subType)
+        internal static bool IsOfGeneric(this Type type, Type interfaceType, out Type subType)
         {
             var interfaces = type.GetInterfaces();
 
@@ -64,7 +64,7 @@ namespace ArgoJson
             return false;
         }
 
-        public static MethodInfo GetDispose(Type type)
+        internal static MethodInfo GetDispose(Type type)
         {
             var interfaces = type.GetInterfaces();
 
@@ -79,7 +79,7 @@ namespace ArgoJson
             throw new NotImplementedException();
         }
 
-        public static Delegate CompileToType<T>(Type type,
+        internal static Delegate CompileToType<T>(Type type,
             Expression<T> expression)
         {
             var typeBuilder = Serializer._assemblyModule.DefineType(
@@ -97,6 +97,19 @@ namespace ArgoJson
                 expression.Type,
                 serializerType.GetMethod("Serialize")
             );
+        }
+
+        internal static void GetHandler(Type type, out TypeNode node) 
+        {
+            // Attempt to find handling type
+            if (Serializer._types.TryGetValue(type, out node) == false)
+            {
+                // Create a new handler for this type as it is not recognized
+                node = new TypeNode(type);
+
+                //Add new handler for this type
+                Serializer._types.Add(type, node);
+            }
         }
     }
 }
