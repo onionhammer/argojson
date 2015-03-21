@@ -11,7 +11,7 @@ namespace ArgoJson
     {
         #region Fields
 
-        internal static readonly Dictionary<Type, TypeNode> _types;
+        internal static readonly Dictionary<Type, SerializerNode> _types;
 
         private static readonly AssemblyBuilder _assemblyBuilder;
 
@@ -32,15 +32,15 @@ namespace ArgoJson
             _assemblyModule = _assemblyBuilder.DefineDynamicModule("Module");
 
             // Initialize several basic types
-            _types = new Dictionary<Type, TypeNode>(capacity: 16)
+            _types = new Dictionary<Type, SerializerNode>(capacity: 16)
             {
-                { typeof(int),      new TypeNode(typeof(int)) },
-                { typeof(bool),     new TypeNode(typeof(bool)) },
-                { typeof(double),   new TypeNode(typeof(double)) },
-                { typeof(float),    new TypeNode(typeof(float)) },
-                { typeof(string),   new TypeNode(typeof(string)) },
-                { typeof(Guid),     new TypeNode(typeof(Guid)) },
-                { typeof(DateTime), new TypeNode(typeof(DateTime)) },
+                { typeof(int),      new SerializerNode(typeof(int)) },
+                { typeof(bool),     new SerializerNode(typeof(bool)) },
+                { typeof(double),   new SerializerNode(typeof(double)) },
+                { typeof(float),    new SerializerNode(typeof(float)) },
+                { typeof(string),   new SerializerNode(typeof(string)) },
+                { typeof(Guid),     new SerializerNode(typeof(Guid)) },
+                { typeof(DateTime), new SerializerNode(typeof(DateTime)) },
             };
         }
 
@@ -57,8 +57,8 @@ namespace ArgoJson
             
             var type = value.GetType();
 
-            TypeNode node;
-            Helpers.GetHandler(type, out node);
+            SerializerNode node;
+            SerializerNode.GetHandler(type, out node);
 
             // TODO - Perform simple heuristics to determine
             // starting size & buffering

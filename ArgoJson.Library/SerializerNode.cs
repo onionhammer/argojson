@@ -7,7 +7,7 @@ using System.Reflection;
 
 namespace ArgoJson
 {
-    internal struct TypeNode
+    internal struct SerializerNode
     {
         #region Delegates
 
@@ -27,6 +27,23 @@ namespace ArgoJson
         internal readonly Expression<Action<object, StringWriter>> _expression;
 
         internal readonly Action<object, StringWriter> _serialize;
+
+        #endregion
+
+        #region Methods
+
+        public static void GetHandler(Type type, out SerializerNode node)
+        {
+            // Attempt to find handling type
+            if (Serializer._types.TryGetValue(type, out node) == false)
+            {
+                // Create a new handler for this type as it is not recognized
+                node = new SerializerNode(type);
+
+                //Add new handler for this type
+                Serializer._types.Add(type, node);
+            }
+        }
 
         #endregion
 
@@ -72,8 +89,8 @@ namespace ArgoJson
                 }
 
                 // Attempt to find handling type
-                TypeNode node;
-                Helpers.GetHandler(propType, out node);
+                SerializerNode node;
+                GetHandler(propType, out node);
 
                 // Append serializer to expression
                 expressions.Add(Expression.Call(writerParam, WriteString,
@@ -105,11 +122,95 @@ namespace ArgoJson
             );
         }
 
-        static Expression<Action<object, StringWriter>> BuildArraySerializerForIter(Type owner, Type generic)
+        /// <summary>
+        /// Produces an expression tree to serialize the input array type
+        /// </summary>
+        /// <param name="type">The array type being serialized</param>
+        /// <param name="subType">The type of objects held within the array</param>
+        /// <param name="getLength">An expression to retrieve the length of the array</param>
+        /// <param name="getItem">An expresion to get the item from an array</param>
+        static Expression<Action<object, StringWriter>> BuildArraySerializer(Type type, Type subType, 
+            Func<Expression, Expression> getLength,
+            Func<Expression, Expression, Expression> getItem)
         {
             var parentParam = Expression.Parameter(typeof(object));
             var writerParam = Expression.Parameter(typeof(StringWriter));
-            var parentVar   = Expression.Variable(owner);
+            var parentVar   = Expression.Variable(type);
+
+            var iParam      = Expression.Parameter(typeof(int));
+            var lengthParam = Expression.Parameter(typeof(int));
+
+            ParameterExpression[] declarations = {
+                parentVar, iParam, lengthParam
+            };
+
+            var expressions = new List<Expression>(capacity: 6) {
+                // "var parent = ({type})parentObj;"
+                Expression.Assign(parentVar, Expression.Convert(parentParam, type)),
+
+                // "var i = 0;
+                Expression.Assign(iParam, Expression.Constant(0)),
+
+                // "var length = parent.length";
+                Expression.Assign(lengthParam, getLength(parentVar)),
+
+                // "["
+                Expression.Call(writerParam, WriteChar, Expression.Constant('['))
+            };
+
+            var comma = Expression.Call(writerParam, WriteChar, Expression.Constant(','));
+
+            // Attempt to find handling type
+            SerializerNode node;
+            GetHandler(subType, out node);
+
+            // Iterate through all members and add them
+            var endLoop = Expression.Label();
+
+            // Swap {ienumerator}.Current for value in expression
+            var blockBody = new ChildVisitor(writerParam, getItem(parentVar, iParam))
+                .Visit(node._expression.Body);
+
+            var checkComma = Expression.IfThen(
+                Expression.NotEqual(iParam, Expression.Constant(0)),
+                comma);
+
+            var ifStmt = Expression.IfThen(
+                Expression.Equal(iParam, lengthParam),                       // if (i == length)
+                Expression.Break(endLoop)                                    //     break;
+            );
+
+            var loopBody = Expression.Block(
+                ifStmt,
+                checkComma,                                                  // if (i != 0) {{comma}}
+                blockBody,                                                   // {body}
+                Expression.Assign(iParam, Expression.Increment(iParam))      // ++i
+            );
+
+            expressions.Add(Expression.Loop(loopBody, endLoop, Expression.Label()));
+
+            // "]"
+            expressions.Add(
+                Expression.Call(writerParam, WriteChar, Expression.Constant(']'))
+            );
+
+            // Build body of lambda
+            var body = Expression.Block(
+                declarations,
+                expressions
+            );
+
+            return Expression.Lambda<Action<object, StringWriter>>(
+                body,
+                parentParam, writerParam
+            );
+        }
+
+        static Expression<Action<object, StringWriter>> BuildArraySerializerForIter(Type type, Type generic)
+        {
+            var parentParam = Expression.Parameter(typeof(object));
+            var writerParam = Expression.Parameter(typeof(StringWriter));
+            var parentVar   = Expression.Variable(type);
 
             var isFirstParam   = Expression.Parameter(typeof(bool));
             var subType        = generic.GetGenericArguments()[0];
@@ -126,7 +227,7 @@ namespace ArgoJson
 
             var expressions = new List<Expression>(capacity: 15) {
                 // "var parent = ({type})parentObj;"
-                Expression.Assign(parentVar, Expression.Convert(parentParam, owner)),
+                Expression.Assign(parentVar, Expression.Convert(parentParam, type)),
 
                 // "var isFirst = false"
                 Expression.Assign(isFirstParam, Expression.Constant(true)),
@@ -141,8 +242,8 @@ namespace ArgoJson
             var comma = Expression.Call(writerParam, WriteChar, Expression.Constant(','));
 
             // Attempt to find handling type
-            TypeNode node;
-            Helpers.GetHandler(subType, out node);
+            SerializerNode node;
+            GetHandler(subType, out node);
 
             // Iterate through all members and add them
             var endLoop = Expression.Label();
@@ -188,157 +289,34 @@ namespace ArgoJson
             );
         }
 
-        static Expression<Action<object, StringWriter>> BuildArraySerializerForList(Type owner, Type generic)
+        /// <summary>
+        /// Produces an expression tree to serialize the input list type
+        /// </summary>
+        /// <param name="type">The array type being serialized</param>
+        /// <param name="generic">The generic item type of the array</param>
+        static Expression<Action<object, StringWriter>> BuildArraySerializerForList(Type type, Type generic)
         {
-            var parentParam = Expression.Parameter(typeof(object));
-            var writerParam = Expression.Parameter(typeof(StringWriter));
-            var parentVar   = Expression.Variable(owner);
+            var subType = generic.GetGenericArguments()[0];
+            var getItem = generic.GetMethod("get_Item");
 
-            var iParam      = Expression.Parameter(typeof(int));
-            var subType     = generic.GetGenericArguments()[0];
-            var lengthParam = Expression.Parameter(typeof(int));
-            var getItem     = generic.GetMethod("get_Item");
-
-            ParameterExpression[] declarations = {
-                parentVar, iParam, lengthParam
-            };
-
-            var expressions = new List<Expression>(capacity: 6) {
-                // "var parent = ({type})parentObj;"
-                Expression.Assign(parentVar, Expression.Convert(parentParam, owner)),
-
-                // "var i = 0;
-                Expression.Assign(iParam, Expression.Constant(0)),
-
-                // "var length = parent.Count";
-                Expression.Assign(lengthParam, Expression.Property(parentVar, "Count")),
-
-                // "["
-                Expression.Call(writerParam, WriteChar, Expression.Constant('['))
-            };
-
-            var comma = Expression.Call(writerParam, WriteChar, Expression.Constant(','));
-
-            // Attempt to find handling type
-            TypeNode node;
-            Helpers.GetHandler(subType, out node);
-
-            // Iterate through all members and add them
-            var endLoop = Expression.Label();
-
-            // Swap {ienumerator}.Current for value in expression
-            var arrayAccess = Expression.Call(parentVar, getItem, iParam);
-            var blockBody   = new ChildVisitor(writerParam, arrayAccess)
-                .Visit(node._expression.Body);
-
-            var checkComma = Expression.IfThen(
-                Expression.NotEqual(iParam, Expression.Constant(0)),
-                comma);
-
-            var ifStmt = Expression.IfThen(
-                Expression.Equal(iParam, lengthParam),                       // if (i == length)
-                Expression.Break(endLoop)                                    //     break;
-            );
-
-            var loopBody = Expression.Block(
-                ifStmt,
-                checkComma,                                                  // if (i != 0) {{comma}}
-                blockBody,                                                   // {body}
-                Expression.Assign(iParam, Expression.Increment(iParam))      // ++i
-            );
-
-            expressions.Add(Expression.Loop(loopBody, endLoop, Expression.Label()));
-
-            // "]"
-            expressions.Add(
-                Expression.Call(writerParam, WriteChar, Expression.Constant(']'))
-            );
-
-            // Build body of lambda
-            var body = Expression.Block(
-                declarations,
-                expressions
-            );
-
-            return Expression.Lambda<Action<object, StringWriter>>(
-                body,
-                parentParam, writerParam
+            return BuildArraySerializer(
+                type, subType,
+                (parent) => Expression.Property(parent, "Count"),
+                (parent, i) => Expression.Call(parent, getItem, i)
             );
         }
 
-        static Expression<Action<object, StringWriter>> BuildArraySerializerForArray(Type owner, Type subType)
+        /// <summary>
+        /// Produces an expression tree to serialize the input array type
+        /// </summary>
+        /// <param name="type">The array type being serialized</param>
+        /// <param name="subType">The type of objects held within the array</param>
+        static Expression<Action<object, StringWriter>> BuildArraySerializerForArray(Type type, Type subType)
         {
-            var parentParam = Expression.Parameter(typeof(object));
-            var writerParam = Expression.Parameter(typeof(StringWriter));
-            var parentVar   = Expression.Variable(owner);
-
-            var iParam      = Expression.Parameter(typeof(int));
-            var lengthParam = Expression.Parameter(typeof(int));
-
-            ParameterExpression[] declarations = {
-                parentVar, iParam, lengthParam
-            };
-
-            var expressions = new List<Expression>(capacity: 6) {
-                // "var parent = ({type})parentObj;"
-                Expression.Assign(parentVar, Expression.Convert(parentParam, owner)),
-
-                // "var i = 0;
-                Expression.Assign(iParam, Expression.Constant(0)),
-
-                // "var length = parent.length";
-                Expression.Assign(lengthParam, Expression.ArrayLength(parentVar)),
-
-                // "["
-                Expression.Call(writerParam, WriteChar, Expression.Constant('['))
-            };
-
-            var comma = Expression.Call(writerParam, WriteChar, Expression.Constant(','));
-
-            // Attempt to find handling type
-            TypeNode node;
-            Helpers.GetHandler(subType, out node);
-
-            // Iterate through all members and add them
-            var endLoop = Expression.Label();
-
-            // Swap {ienumerator}.Current for value in expression
-            var elementAt   = Expression.ArrayAccess(parentVar, iParam);
-            var blockBody   = new ChildVisitor(writerParam, elementAt)
-                .Visit(node._expression.Body);
-
-            var checkComma = Expression.IfThen(
-                Expression.NotEqual(iParam, Expression.Constant(0)),
-                comma);
-
-            var ifStmt = Expression.IfThen(
-                Expression.Equal(iParam, lengthParam),                       // if (i == length)
-                Expression.Break(endLoop)                                    //     break;
-            );
-
-            var loopBody = Expression.Block(
-                ifStmt,
-                checkComma,                                                  // if (i != 0) {{comma}}
-                blockBody,                                                   // {body}
-                Expression.Assign(iParam, Expression.Increment(iParam))      // ++i
-            );
-
-            expressions.Add(Expression.Loop(loopBody, endLoop, Expression.Label()));
-
-            // "]"
-            expressions.Add(
-                Expression.Call(writerParam, WriteChar, Expression.Constant(']'))
-            );
-
-            // Build body of lambda
-            var body = Expression.Block(
-                declarations,
-                expressions
-            );
-
-            return Expression.Lambda<Action<object, StringWriter>>(
-                body,
-                parentParam, writerParam
+            return BuildArraySerializer(
+                type, subType,
+                (parent) => Expression.ArrayLength(parent),
+                (parent, i) => Expression.ArrayAccess(parent, i)
             );
         }
 
@@ -346,7 +324,7 @@ namespace ArgoJson
 
         #region Constructor
 
-        internal TypeNode(Type type)
+        internal SerializerNode(Type type)
         {
             bool nullable = false;
 

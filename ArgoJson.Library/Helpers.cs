@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
@@ -9,9 +7,15 @@ namespace ArgoJson
 {
     public static class Helpers
     {
+        #region Fields
+
         static char[] Illegal = { 
             '"', '\\', '/', '\b', '\f', '\n', '\r', '\t' 
         };
+
+        #endregion
+
+        #region Methods
 
         public static string Escape(string value)
         {
@@ -99,17 +103,6 @@ namespace ArgoJson
             );
         }
 
-        internal static void GetHandler(Type type, out TypeNode node) 
-        {
-            // Attempt to find handling type
-            if (Serializer._types.TryGetValue(type, out node) == false)
-            {
-                // Create a new handler for this type as it is not recognized
-                node = new TypeNode(type);
-
-                //Add new handler for this type
-                Serializer._types.Add(type, node);
-            }
-        }
+        #endregion
     }
 }
