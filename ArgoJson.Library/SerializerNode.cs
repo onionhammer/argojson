@@ -153,7 +153,7 @@ namespace ArgoJson
                 // "var i = 0;
                 Expression.Assign(iParam, Expression.Constant(0)),
 
-                // "var length = parent.length";
+                // "var length = parent.Length";
                 Expression.Assign(lengthParam, getLength(parentVar)),
 
                 // "["
@@ -169,7 +169,7 @@ namespace ArgoJson
             // Iterate through all members and add them
             var endLoop = Expression.Label();
 
-            // Swap {ienumerator}.Current for value in expression
+            // Swap parent[i] for 'value' in expression
             var blockBody = new ChildVisitor(writerParam, getItem(parentVar, iParam))
                 .Visit(node._expression.Body);
 
@@ -322,6 +322,27 @@ namespace ArgoJson
             );
         }
 
+        static Expression<Action<object, StringWriter>> BuildPrimitiveSerializer(Type type)
+        {
+            switch (type.Name)
+            {
+                case "Byte":
+                    return (value, writer) => writer.Write((byte)value);
+                case "Int32":
+                    return (value, writer) => writer.Write((int)value);
+                case "Int64":
+                    return (value, writer) => writer.Write((long)value);
+                case "Boolean":
+                    return (value, writer) => writer.Write((bool)value);
+                case "Single":
+                    return (value, writer) => writer.Write((float)value);
+                case "Double":
+                    return (value, writer) => writer.Write((double)value);
+                default:
+                    return (value, writer) => writer.Write(value as string);
+            }
+        }
+
         #endregion
 
         #region Constructor
@@ -333,7 +354,6 @@ namespace ArgoJson
             {
                 { typeof(int),      new SerializerNode(typeof(int)) },
                 { typeof(bool),     new SerializerNode(typeof(bool)) },
-                { typeof(double),   new SerializerNode(typeof(double)) },
                 { typeof(float),    new SerializerNode(typeof(float)) },
                 { typeof(string),   new SerializerNode(typeof(string)) },
                 { typeof(Guid),     new SerializerNode(typeof(Guid)) },
@@ -349,22 +369,11 @@ namespace ArgoJson
 
             if (type.IsPrimitive)
             {
-                switch (type.Name)
-                {
-                    case "Boolean":
-                        if (nullable)
-                            _expression = (value, writer) => writer.Write(value == null ? "null" : (bool)value ? "true" : "false");
-                        else
-                            _expression = (value, writer) => writer.Write((bool)value);
-                        break;
-
-                    default:
-                        if (nullable)
-                            _expression = (value, writer) => writer.Write(value == null ? "null" : value as string);
-                        else
-                            _expression = (value, writer) => writer.Write(value as string);
-                        break;
-                }
+                // TODO - Rewrite nullable to specific kind
+                if (nullable)
+                    _expression = (value, writer) => writer.Write(value == null ? "null" : value.ToString());
+                else
+                    _expression = BuildPrimitiveSerializer(type);
             }
             else
             {
