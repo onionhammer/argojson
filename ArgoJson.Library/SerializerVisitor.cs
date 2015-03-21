@@ -2,12 +2,12 @@
 
 namespace ArgoJson
 {
-    internal class ChildVisitor : ExpressionVisitor
+    internal class SerializerVisitor : ExpressionVisitor
     {
         private ParameterExpression _writer;
         private Expression _value;
 
-        public ChildVisitor(ParameterExpression writer, Expression value)
+        public SerializerVisitor(ParameterExpression writer, Expression value)
         {
             _writer = writer;
             _value  = value;

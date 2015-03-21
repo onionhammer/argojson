@@ -101,7 +101,7 @@ namespace ArgoJson
                 var getter = Expression.PropertyOrField(parentVar, prop.Name);
                 
                 // Visit node expression
-                var blockBody = new ChildVisitor(writerParam, Expression.Convert(getter, typeof(object)))
+                var blockBody = new SerializerVisitor(writerParam, Expression.Convert(getter, typeof(object)))
                     .Visit(node._expression.Body);
 
                 // Appends new block
@@ -170,7 +170,7 @@ namespace ArgoJson
             var endLoop = Expression.Label();
 
             // Swap parent[i] for 'value' in expression
-            var blockBody = new ChildVisitor(writerParam, getItem(parentVar, iParam))
+            var blockBody = new SerializerVisitor(writerParam, getItem(parentVar, iParam))
                 .Visit(node._expression.Body);
 
             var checkComma = Expression.IfThen(
@@ -252,7 +252,7 @@ namespace ArgoJson
 
             // Swap {ienumerator}.Current for value in expression
             var currentExpr = Expression.PropertyOrField(enumerator, "Current");
-            var blockBody   = new ChildVisitor(writerParam, currentExpr)
+            var blockBody   = new SerializerVisitor(writerParam, currentExpr)
                 .Visit(node._expression.Body);
 
             var checkComma = Expression.IfThen(
