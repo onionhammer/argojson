@@ -24,6 +24,8 @@ namespace ArgoJson
         
         #region Fields
 
+        internal static readonly Dictionary<Type, SerializerNode> _types;
+
         internal readonly Expression<Action<object, StringWriter>> _expression;
 
         internal readonly Action<object, StringWriter> _serialize;
@@ -35,13 +37,13 @@ namespace ArgoJson
         public static void GetHandler(Type type, out SerializerNode node)
         {
             // Attempt to find handling type
-            if (Serializer._types.TryGetValue(type, out node) == false)
+            if (_types.TryGetValue(type, out node) == false)
             {
                 // Create a new handler for this type as it is not recognized
                 node = new SerializerNode(type);
 
                 //Add new handler for this type
-                Serializer._types.Add(type, node);
+                _types.Add(type, node);
             }
         }
 
@@ -323,6 +325,21 @@ namespace ArgoJson
         #endregion
 
         #region Constructor
+
+        static SerializerNode()
+        {
+            // Initialize several basic types
+            _types = new Dictionary<Type, SerializerNode>(capacity: 16)
+            {
+                { typeof(int),      new SerializerNode(typeof(int)) },
+                { typeof(bool),     new SerializerNode(typeof(bool)) },
+                { typeof(double),   new SerializerNode(typeof(double)) },
+                { typeof(float),    new SerializerNode(typeof(float)) },
+                { typeof(string),   new SerializerNode(typeof(string)) },
+                { typeof(Guid),     new SerializerNode(typeof(Guid)) },
+                { typeof(DateTime), new SerializerNode(typeof(DateTime)) },
+            };
+        }
 
         internal SerializerNode(Type type)
         {

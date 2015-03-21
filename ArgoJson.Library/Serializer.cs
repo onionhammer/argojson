@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -10,8 +9,6 @@ namespace ArgoJson
     public class Serializer
     {
         #region Fields
-
-        internal static readonly Dictionary<Type, SerializerNode> _types;
 
         private static readonly AssemblyBuilder _assemblyBuilder;
 
@@ -30,18 +27,6 @@ namespace ArgoJson
             );
 
             _assemblyModule = _assemblyBuilder.DefineDynamicModule("Module");
-
-            // Initialize several basic types
-            _types = new Dictionary<Type, SerializerNode>(capacity: 16)
-            {
-                { typeof(int),      new SerializerNode(typeof(int)) },
-                { typeof(bool),     new SerializerNode(typeof(bool)) },
-                { typeof(double),   new SerializerNode(typeof(double)) },
-                { typeof(float),    new SerializerNode(typeof(float)) },
-                { typeof(string),   new SerializerNode(typeof(string)) },
-                { typeof(Guid),     new SerializerNode(typeof(Guid)) },
-                { typeof(DateTime), new SerializerNode(typeof(DateTime)) },
-            };
         }
 
         protected Serializer() { }
