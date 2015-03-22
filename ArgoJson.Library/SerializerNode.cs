@@ -85,10 +85,9 @@ namespace ArgoJson
                     continue;
 
                 if (isFirst == false)
-                {
                     expressions.Add(comma);
+                else
                     isFirst = false;
-                }
 
                 // Attempt to find handling type
                 SerializerNode node;

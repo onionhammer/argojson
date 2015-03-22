@@ -49,6 +49,8 @@ namespace ArgoJson
             // TODO - Perform simple heuristics to determine
             // starting size & buffering
 
+            // TODO - Determine if type is anonymous.
+
             using (var sw = new StringWriter(builder))
                 node._serialize(value, sw);
             
