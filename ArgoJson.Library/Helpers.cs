@@ -9,7 +9,7 @@ namespace ArgoJson
     {
         #region Fields
 
-        static char[] Illegal = { 
+        static char[] CharsToEscape = { 
             '"', '\\', '/', '\b', '\f', '\n', '\r', '\t' 
         };
 
@@ -22,29 +22,27 @@ namespace ArgoJson
             var result = new StringBuilder(value);
             var index  = 0;
             var offset = 0;
+            int destIndex;
 
             do
             {
-                int found = value.IndexOfAny(Illegal, index);
+                index = value.IndexOfAny(CharsToEscape, index);
 
-                if (found > -1)
+                if (index < 0)
+                    break;
+
+                destIndex = index + offset;
+                switch (result[destIndex])
                 {
-                    index = found;
-
-                    switch (result[found])
-                    {
-                        case '\b': result[found] = 'b'; break;
-                        case '\f': result[found] = 'f'; break;
-                        case '\n': result[found] = 'n'; break;
-                        case '\r': result[found] = 'r'; break;
-                        case '\t': result[found] = 't'; break;
-                    }
-
-                    result.Insert(index + offset++, '\\');
+                    case '\b': result[destIndex] = 'b'; break;
+                    case '\f': result[destIndex] = 'f'; break;
+                    case '\n': result[destIndex] = 'n'; break;
+                    case '\r': result[destIndex] = 'r'; break;
+                    case '\t': result[destIndex] = 't'; break;
                 }
-                else break;
 
-            } while (index < result.Length);
+                result.Insert(index++ + offset++, '\\');
+            } while (index + offset < result.Length);
 
             return result.ToString();
         }
@@ -80,7 +78,7 @@ namespace ArgoJson
                     return iface.GetMethod("Dispose");
             }
 
-            throw new NotImplementedException();
+            return null;
         }
 
         internal static Delegate CompileToType<T>(Type type,
@@ -90,8 +88,7 @@ namespace ArgoJson
                 type.Name + "Serializer" + Guid.NewGuid().ToString("N"));
 
             var methodBuilder = typeBuilder.DefineMethod(
-                "Serialize",
-                MethodAttributes.Public | MethodAttributes.Static);
+                "Serialize", MethodAttributes.Public | MethodAttributes.Static);
 
             expression.CompileToMethod(methodBuilder);
 

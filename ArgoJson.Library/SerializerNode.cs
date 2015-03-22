@@ -322,27 +322,6 @@ namespace ArgoJson
             );
         }
 
-        static Expression<Action<object, StringWriter>> BuildPrimitiveSerializer(Type type)
-        {
-            switch (type.Name)
-            {
-                case "Byte":
-                    return (value, writer) => writer.Write((byte)value);
-                case "Int32":
-                    return (value, writer) => writer.Write((int)value);
-                case "Int64":
-                    return (value, writer) => writer.Write((long)value);
-                case "Boolean":
-                    return (value, writer) => writer.Write((bool)value);
-                case "Single":
-                    return (value, writer) => writer.Write((float)value);
-                case "Double":
-                    return (value, writer) => writer.Write((double)value);
-                default:
-                    return (value, writer) => writer.Write(value as string);
-            }
-        }
-
         #endregion
 
         #region Constructor
@@ -369,11 +348,10 @@ namespace ArgoJson
 
             if (type.IsPrimitive)
             {
-                // TODO - Rewrite nullable to specific kind
                 if (nullable)
                     _expression = (value, writer) => writer.Write(value == null ? "null" : value.ToString());
                 else
-                    _expression = BuildPrimitiveSerializer(type);
+                    _expression = (value, writer) => writer.Write(value.ToString());
             }
             else
             {

@@ -40,7 +40,8 @@ namespace ArgoJson
             if (value == null)
                 throw new ArgumentNullException("item");
             
-            var type = value.GetType();
+            var type    = value.GetType();
+            var builder = new StringBuilder(256);
 
             SerializerNode node;
             SerializerNode.GetHandler(type, out node);
@@ -48,7 +49,6 @@ namespace ArgoJson
             // TODO - Perform simple heuristics to determine
             // starting size & buffering
 
-            var builder = new StringBuilder(256);
             using (var sw = new StringWriter(builder))
                 node._serialize(value, sw);
             
