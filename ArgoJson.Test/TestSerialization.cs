@@ -45,14 +45,14 @@ namespace ArgoJson.Test
             var asString = obj.ToString();
             var result = ArgoJson.Serializer.Serialize(obj);
         }
+    }
 
-        public class TestObject
-        {
-            public string Name { get; set; }
+    public class TestObject
+    {
+        public string Name { get; set; }
 
-            public string Address { get; set; }
+        public string Address { get; set; }
 
-            public int Age { get; set; }
-        }
+        public int Age { get; set; }
     }
 }

@@ -37,32 +37,28 @@ namespace ArgoJson
 
         public static string Serialize(object value)
         {
-            var type    = value.GetType();
             var builder = new StringBuilder(256);
 
-            SerializerNode node;
-            SerializerNode.GetHandler(type, out node);
-
-            // TODO - Perform simple heuristics to determine
-            // starting size & buffering
-
-            // TODO - Determine if type is anonymous.
-
             using (var sw = new StringWriter(builder))
-                node._serialize(value, sw);
+                Serialize(value, sw);
             
             return builder.ToString();
         }
 
         public static void Serialize(object value, Stream destination)
         {
+            using (var sw = new StreamWriter(destination))
+                Serialize(value, sw);
+        }
+
+        public static void Serialize(object value, TextWriter destination)
+        {
             var type = value.GetType();
 
             SerializerNode node;
             SerializerNode.GetHandler(type, out node);
 
-            using (var sw = new StreamWriter(destination))
-                node._serialize(value, sw);
+            node._serialize(value, destination);
         }
 
         public static void SaveAssembly(string output)

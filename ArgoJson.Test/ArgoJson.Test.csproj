@@ -53,6 +53,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TestSerialization.cs" />
     <Compile Include="TestStringSerialization.cs" />
+    <Compile Include="TestDeserialization.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ArgoJson.Console\ArgoJson.Console.csproj">
