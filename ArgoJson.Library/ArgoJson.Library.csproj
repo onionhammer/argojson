@@ -39,6 +39,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Deserializer.cs" />
     <Compile Include="SerializerVisitor.cs" />
     <Compile Include="Helpers.cs" />
     <Compile Include="JsonIgnoreAttribute.cs" />

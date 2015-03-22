@@ -17,7 +17,7 @@ namespace ArgoJson
         {
             switch (node.Type.Name)
             {
-                case "StringWriter":
+                case "TextWriter":
                     return _writer;
 
                 case "Object":

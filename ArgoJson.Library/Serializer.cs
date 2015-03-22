@@ -37,9 +37,6 @@ namespace ArgoJson
 
         public static string Serialize(object value)
         {
-            if (value == null)
-                throw new ArgumentNullException("item");
-            
             var type    = value.GetType();
             var builder = new StringBuilder(256);
 
@@ -55,6 +52,17 @@ namespace ArgoJson
                 node._serialize(value, sw);
             
             return builder.ToString();
+        }
+
+        public static void Serialize(object value, Stream destination)
+        {
+            var type = value.GetType();
+
+            SerializerNode node;
+            SerializerNode.GetHandler(type, out node);
+
+            using (var sw = new StreamWriter(destination))
+                node._serialize(value, sw);
         }
 
         public static void SaveAssembly(string output)

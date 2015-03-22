@@ -11,10 +11,10 @@ namespace ArgoJson
     {
         #region Delegates
 
-        static MethodInfo WriteString = typeof(StringWriter)
+        static MethodInfo WriteString = typeof(TextWriter)
             .GetMethod("Write", new[] { typeof(string) });
 
-        static MethodInfo WriteChar = typeof(StringWriter)
+        static MethodInfo WriteChar = typeof(TextWriter)
             .GetMethod("Write", new[] { typeof(char) });
 
         static MethodInfo MoveNext = typeof(IEnumerator)
@@ -26,9 +26,9 @@ namespace ArgoJson
 
         internal static readonly Dictionary<Type, SerializerNode> _types;
 
-        internal readonly Expression<Action<object, StringWriter>> _expression;
+        internal readonly Expression<Action<object, TextWriter>> _expression;
 
-        internal readonly Action<object, StringWriter> _serialize;
+        internal readonly Action<object, TextWriter> _serialize;
 
         #endregion
 
@@ -51,12 +51,12 @@ namespace ArgoJson
 
         #region Serializers
 
-        static Expression<Action<object, StringWriter>> BuildObjectSerializer(Type owner)
+        static Expression<Action<object, TextWriter>> BuildObjectSerializer(Type owner)
         {
             // Get properties
             var props       = owner.GetProperties(BindingFlags.Public | BindingFlags.Instance);
             var parentParam = Expression.Parameter(typeof(object));
-            var writerParam = Expression.Parameter(typeof(StringWriter));
+            var writerParam = Expression.Parameter(typeof(TextWriter));
             var parentVar   = Expression.Variable(owner);
 
             ParameterExpression[] declarations = {
@@ -118,7 +118,7 @@ namespace ArgoJson
                 expressions
             );
 
-            return Expression.Lambda<Action<object, StringWriter>>(
+            return Expression.Lambda<Action<object, TextWriter>>(
                 body, parentParam, writerParam
             );
         }
@@ -130,12 +130,12 @@ namespace ArgoJson
         /// <param name="subType">The type of objects held within the array</param>
         /// <param name="getLength">An expression to retrieve the length of the array</param>
         /// <param name="getItem">An expresion to get the item from an array</param>
-        static Expression<Action<object, StringWriter>> BuildArraySerializer(Type type, Type subType, 
+        static Expression<Action<object, TextWriter>> BuildArraySerializer(Type type, Type subType, 
             Func<Expression, Expression> getLength,
             Func<Expression, Expression, Expression> getItem)
         {
             var parentParam = Expression.Parameter(typeof(object));
-            var writerParam = Expression.Parameter(typeof(StringWriter));
+            var writerParam = Expression.Parameter(typeof(TextWriter));
             var parentVar   = Expression.Variable(type);
 
             var iParam      = Expression.Parameter(typeof(int));
@@ -201,16 +201,16 @@ namespace ArgoJson
                 expressions
             );
 
-            return Expression.Lambda<Action<object, StringWriter>>(
+            return Expression.Lambda<Action<object, TextWriter>>(
                 body,
                 parentParam, writerParam
             );
         }
 
-        static Expression<Action<object, StringWriter>> BuildArraySerializerForIter(Type type, Type generic)
+        static Expression<Action<object, TextWriter>> BuildArraySerializerForIter(Type type, Type generic)
         {
             var parentParam = Expression.Parameter(typeof(object));
-            var writerParam = Expression.Parameter(typeof(StringWriter));
+            var writerParam = Expression.Parameter(typeof(TextWriter));
             var parentVar   = Expression.Variable(type);
 
             var isFirstParam   = Expression.Parameter(typeof(bool));
@@ -284,7 +284,7 @@ namespace ArgoJson
                 expressions
             );
 
-            return Expression.Lambda<Action<object, StringWriter>>(
+            return Expression.Lambda<Action<object, TextWriter>>(
                 body, 
                 parentParam, writerParam
             );
@@ -295,7 +295,7 @@ namespace ArgoJson
         /// </summary>
         /// <param name="type">The array type being serialized</param>
         /// <param name="generic">The generic item type of the array</param>
-        static Expression<Action<object, StringWriter>> BuildArraySerializerForList(Type type, Type generic)
+        static Expression<Action<object, TextWriter>> BuildArraySerializerForList(Type type, Type generic)
         {
             var subType = generic.GetGenericArguments()[0];
             var getItem = generic.GetMethod("get_Item");
@@ -312,7 +312,7 @@ namespace ArgoJson
         /// </summary>
         /// <param name="type">The array type being serialized</param>
         /// <param name="subType">The type of objects held within the array</param>
-        static Expression<Action<object, StringWriter>> BuildArraySerializerForArray(Type type, Type subType)
+        static Expression<Action<object, TextWriter>> BuildArraySerializerForArray(Type type, Type subType)
         {
             return BuildArraySerializer(
                 type, subType,
@@ -398,8 +398,8 @@ namespace ArgoJson
                 }
             }
 
-            _serialize = Helpers.CompileToType(type, _expression) 
-                as Action<object, StringWriter>;
+            _serialize = Helpers.CompileToType(type, _expression)
+                as Action<object, TextWriter>;
         }
 
         #endregion
