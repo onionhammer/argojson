@@ -332,18 +332,9 @@ namespace ArgoJson
 
         static SerializerNode()
         {
+            // Initialize assembly module and expression tree dictionary
             _assemblyModule = Helpers.CreateModule(out _assemblyBuilder);
-            
-            // Initialize several basic types
-            _types = new Dictionary<Type, SerializerNode>(capacity: 16)
-            {
-                { typeof(int),      new SerializerNode(typeof(int)) },
-                { typeof(bool),     new SerializerNode(typeof(bool)) },
-                { typeof(float),    new SerializerNode(typeof(float)) },
-                { typeof(string),   new SerializerNode(typeof(string)) },
-                { typeof(Guid),     new SerializerNode(typeof(Guid)) },
-                { typeof(DateTime), new SerializerNode(typeof(DateTime)) },
-            };
+            _types          = new Dictionary<Type, SerializerNode>(capacity: 16);
         }
 
         internal SerializerNode(Type type)
