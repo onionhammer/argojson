@@ -9,16 +9,7 @@ namespace ArgoJson
 {
     public class Deserializer
     {
-        #region Fields
-
-        #endregion
-
         #region Constructor
-
-        static Deserializer()
-        {
-            // TODO: Define dynamic assembly
-        }
 
         protected Deserializer() { }
 
@@ -40,7 +31,10 @@ namespace ArgoJson
 
         public static T Deserialize<T>(TextReader source)
         {
-            throw new NotImplementedException();
+            DeserializerNode node;
+            DeserializerNode.GetHandler(typeof(T), out node);
+
+            return (T)node._deserialize(source);
         }
 
         #endregion
