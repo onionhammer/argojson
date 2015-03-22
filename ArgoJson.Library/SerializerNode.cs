@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Reflection.Emit;
 
 namespace ArgoJson
 {
@@ -24,12 +25,16 @@ namespace ArgoJson
         
         #region Fields
 
-        internal static readonly Dictionary<Type, SerializerNode> _types;
+        private static readonly AssemblyBuilder _assemblyBuilder;
 
-        internal readonly Expression<Action<object, TextWriter>> _expression;
+        private static readonly ModuleBuilder _assemblyModule;
 
-        internal readonly Action<object, TextWriter> _serialize;
+        private static readonly Dictionary<Type, SerializerNode> _types;
 
+        private readonly Expression<Action<object, TextWriter>> _expression;
+
+        public readonly Action<object, TextWriter> _serialize;
+        
         #endregion
 
         #region Methods
@@ -327,6 +332,8 @@ namespace ArgoJson
 
         static SerializerNode()
         {
+            _assemblyModule = Helpers.CreateModule(out _assemblyBuilder);
+            
             // Initialize several basic types
             _types = new Dictionary<Type, SerializerNode>(capacity: 16)
             {
@@ -398,7 +405,7 @@ namespace ArgoJson
                 }
             }
 
-            _serialize = Helpers.CompileToType(type, _expression)
+            _serialize = _assemblyModule.CompileToType(type, _expression)
                 as Action<object, TextWriter>;
         }
 

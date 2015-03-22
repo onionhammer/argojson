@@ -1,33 +1,11 @@
-﻿using System;
-using System.IO;
-using System.Reflection;
-using System.Reflection.Emit;
+﻿using System.IO;
 using System.Text;
 
 namespace ArgoJson
 {
     public class Serializer
     {
-        #region Fields
-
-        private static readonly AssemblyBuilder _assemblyBuilder;
-
-        internal static readonly ModuleBuilder _assemblyModule;
-
-        #endregion
-
         #region Constructor
-
-        static Serializer()
-        {
-            // Define dynamic assembly
-            _assemblyBuilder = AppDomain.CurrentDomain.DefineDynamicAssembly(
-                new AssemblyName("ArgoJsonSerialization" + Guid.NewGuid().ToString("N")),
-                AssemblyBuilderAccess.RunAndSave
-            );
-
-            _assemblyModule = _assemblyBuilder.DefineDynamicModule("Module");
-        }
 
         protected Serializer() { }
 
@@ -59,11 +37,6 @@ namespace ArgoJson
             SerializerNode.GetHandler(type, out node);
 
             node._serialize(value, destination);
-        }
-
-        public static void SaveAssembly(string output)
-        {
-            _assemblyBuilder.Save(output);
         }
 
         #endregion

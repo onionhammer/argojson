@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Reflection.Emit;
 using System.Text;
 
 namespace ArgoJson
@@ -81,14 +82,26 @@ namespace ArgoJson
             return null;
         }
 
-        internal static Delegate CompileToType<T>(Type type,
-            Expression<T> expression)
+        internal static ModuleBuilder CreateModule(out AssemblyBuilder assembly)
         {
-            var typeBuilder = Serializer._assemblyModule.DefineType(
-                type.Name + "Serializer" + Guid.NewGuid().ToString("N"));
+            // Define dynamic assembly
+            assembly = AppDomain.CurrentDomain.DefineDynamicAssembly(
+                new AssemblyName("ArgoJsonModule" + Guid.NewGuid().ToString("N")),
+                AssemblyBuilderAccess.RunAndSave
+            );
+
+            return assembly.DefineDynamicModule("Module");
+        }
+
+        internal static Delegate CompileToType<T>(
+            this ModuleBuilder module,
+            Type type, Expression<T> expression)
+        {
+            var typeBuilder = module.DefineType(
+                type.Name + "Operation" + Guid.NewGuid().ToString("N"));
 
             var methodBuilder = typeBuilder.DefineMethod(
-                "Serialize", MethodAttributes.Public | MethodAttributes.Static);
+                "Operation", MethodAttributes.Public | MethodAttributes.Static);
 
             expression.CompileToMethod(methodBuilder);
 
@@ -96,7 +109,7 @@ namespace ArgoJson
 
             return Delegate.CreateDelegate(
                 expression.Type,
-                serializerType.GetMethod("Serialize")
+                serializerType.GetMethod("Operation")
             );
         }
 
