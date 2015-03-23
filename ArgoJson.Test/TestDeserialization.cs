@@ -1,14 +1,16 @@
-﻿using System;
-using Microsoft.VisualStudio.TestTools.UnitTesting;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
+using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace ArgoJson.Test
 {
     [TestClass]
     public class TestDeserialization
     {
-        [DebuggerDisplay("{Character}: {Index}")]
+        static readonly char[] OpenItem   = { '[', '{', '"', ',', ':', '}', ']' };
+        static readonly char[] OpenString = { '\\', '"' };
+
+        [DebuggerDisplay("{Index}: {Character}")]
         struct Token
         {
             public readonly char Character;
@@ -20,8 +22,6 @@ namespace ArgoJson.Test
                 Index     = index;
             }
         }
-
-        static char[] OpenItem = { '[', '{', '"', ',', ':', '}', ']' };
 
         [TestMethod]
         public void PlayPen()
@@ -36,20 +36,37 @@ namespace ArgoJson.Test
                 index = serialized.IndexOfAny(OpenItem, index);
 
                 //Position next
-                char charAtIndex = serialized[index];
-                switch (charAtIndex)
+                switch (serialized[index])
                 {
                     default:
-                        items.Add(new Token(charAtIndex, index++));
+                        items.Add(new Token(serialized[index], index++));
                         continue;
                         
-                    case '"': // Open or close string
+                    case '"':
                         // Open a new string
                         items.Add(new Token('"', index++));
 
-                        // TODO: Seek to end of string
-                         
-                        // Close the string
+                        do
+                        {
+                            // Seek to end of string
+                            index = serialized.IndexOfAny(OpenString, index);
+
+                            switch (serialized[index])
+                            {
+                                case '"':
+                                    // Close string
+                                    items.Add(new Token('"', index++));
+                                    goto endString;
+
+                                case '\\':
+                                    // Increment index by 2
+                                    index += 2;
+                                    continue;
+                            }
+
+                        } while (index < serialized.Length);
+
+                        endString:
                         continue;
                 }
 
