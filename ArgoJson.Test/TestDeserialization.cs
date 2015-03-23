@@ -8,90 +8,49 @@ namespace ArgoJson.Test
     [TestClass]
     public class TestDeserialization
     {
-        enum ObjectType
+        [DebuggerDisplay("{Character}: {Index}")]
+        struct Token
         {
-            Array,
-            Object,
-            String,
-            Number,
-            Property
-        }
-
-        [DebuggerDisplay("{Type}: {Index}")]
-        class Position
-        {
+            public readonly char Character;
             public readonly int Index;
-            public readonly ObjectType Type;
-            public readonly List<Position> Children;
-            public int _length;
 
-            public Position(int index, ObjectType type)
+            public Token(char character, int index)
             {
-                Index = index;
-                Type  = type;
-
-                switch (type)
-                {
-                    case ObjectType.Array:
-                    case ObjectType.Object:
-                    case ObjectType.Property:
-                        Children = new List<Position>();
-                        break;
-                }
+                Character = character;
+                Index     = index;
             }
         }
 
-        static char[] OpenItem = { '[', '{', '"', '}', ']' };
+        static char[] OpenItem = { '[', '{', '"', ',', ':', '}', ']' };
 
         [TestMethod]
         public void PlayPen()
         {
             var serialized = "{\"Name\":\"John Smith\",\"Address\":\"1912 Franklin Ave\\nApt. 221\",\"Age\":22}";
 
-            var items = new Stack<Position>(capacity: 32);
+            var items = new List<Token>(capacity: 32);
             int index = 0;
-
-            Position top = null;
 
             do
             {
-                var parent = top;
                 index = serialized.IndexOfAny(OpenItem, index);
 
-                //Position next;
-                switch (serialized[index])
+                //Position next
+                char charAtIndex = serialized[index];
+                switch (charAtIndex)
                 {
-                    case '[': // Open array
-                        items.Push(top = new Position(index++, ObjectType.Array));
+                    default:
+                        items.Add(new Token(charAtIndex, index++));
                         continue;
-
-                    case '{': // Open object
-                        items.Push(top = new Position(index++, ObjectType.Object));
-                        continue;
-
+                        
                     case '"': // Open or close string
-                        if (parent.Type == ObjectType.Object)
-                        {
-                            // Open property
-                            items.Push(top = new Position(index, ObjectType.Property));
-                            parent.Children.Add(top);
-                            parent = top;
-                        }
-
                         // Open a new string
-                        items.Push(top = new Position(index++, ObjectType.String));
+                        items.Add(new Token('"', index++));
 
                         // TODO: Seek to end of string
                          
                         // Close the string
-                        top._length = index++ - top.Index;
                         continue;
-
-                    case '}': // Close object
-                        break;
-
-                    case ']': // Close array
-                        break;
                 }
 
             } while (index < serialized.Length);
