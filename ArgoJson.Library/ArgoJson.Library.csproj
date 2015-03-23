@@ -41,6 +41,7 @@
   <ItemGroup>
     <Compile Include="Deserializer.cs" />
     <Compile Include="DeserializerNode.cs" />
+    <Compile Include="DeserializerParser.cs" />
     <Compile Include="SerializerVisitor.cs" />
     <Compile Include="Helpers.cs" />
     <Compile Include="JsonIgnoreAttribute.cs" />

@@ -62,7 +62,7 @@ namespace ArgoJson
 
             }
 
-            throw new NotImplementedException();
+            _deserialize = (reader) => null;
         }
 
         #endregion
