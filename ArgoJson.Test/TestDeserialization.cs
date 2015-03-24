@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 
 namespace ArgoJson.Test
 {
@@ -24,11 +25,32 @@ namespace ArgoJson.Test
         }
 
         [TestMethod]
+        public void TestTestItem()
+        {
+            var original  = new TestItem {
+                Id        = Guid.NewGuid(),
+                Graduated = DateTime.Today.AddYears(-15),
+                Name      = "John Smith",
+                //Child     = new TestItem
+                //{
+                //    Id        = Guid.NewGuid(),
+                //    Graduated = DateTime.Today.AddYears(-10),
+                //    Name      = "Jane Doe"
+                //}
+            };
+
+            var serialized   = Serializer.Serialize(original);
+            var deserialized = Deserializer.Deserialize<TestItem>(serialized);
+            
+            Assert.AreEqual(original, deserialized);
+        }
+
+        [TestMethod]
         public void PlayPen()
         {
             var serialized = "{\"Name\":\"John Smith\",\"Address\":\"1912 Franklin Ave\\nApt. 221\",\"Age\":22}";
 
-            var items = new List<Token>(capacity: 32);
+            var tokens = new List<Token>(capacity: 32);
             int index = 0;
 
             do
@@ -39,12 +61,12 @@ namespace ArgoJson.Test
                 switch (serialized[index])
                 {
                     default:
-                        items.Add(new Token(serialized[index], index++));
+                        tokens.Add(new Token(serialized[index], index++));
                         continue;
                         
                     case '"':
                         // Open a new string
-                        items.Add(new Token('"', index++));
+                        tokens.Add(new Token('"', index++));
 
                         do
                         {
@@ -55,7 +77,7 @@ namespace ArgoJson.Test
                             {
                                 case '"':
                                     // Close string
-                                    items.Add(new Token('"', index++));
+                                    tokens.Add(new Token('"', index++));
                                     goto endString;
 
                                 case '\\':

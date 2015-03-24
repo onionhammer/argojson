@@ -2,12 +2,24 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection.Emit;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace ArgoJson
 {
+    public class TestItem
+    {
+        public Guid Id { get; set; }
+
+        public string Name { get; set; }
+
+        public DateTime? Graduated { get; set; }
+
+        //public TestItem Child { get; set; }
+    }
+
     internal struct DeserializerNode
     {
         #region Fields
@@ -18,7 +30,7 @@ namespace ArgoJson
 
         private static readonly Dictionary<Type, DeserializerNode> _types;
 
-        public readonly Func<TextReader, object> _deserialize;
+        public readonly Func<JsonReader, object> _deserialize;
 
         #endregion
 
@@ -47,8 +59,47 @@ namespace ArgoJson
             _types          = new Dictionary<Type, DeserializerNode>(capacity: 16);
         }
 
+        #region Test
+
+        static object DeserializeTestItem(JsonReader reader)
+        {
+            var result = new TestItem();
+
+            reader.ReadStartObject();
+
+            string propertyName;
+            while (reader.ReadPropertyStart(out propertyName))
+            {
+                switch (propertyName)
+                {
+                    case "Id": // Read GUID
+                        Guid value1;
+                        if (reader.ReadGuidValue(out value1))
+                            result.Id = value1;
+                        continue;
+
+                    case "Graduated": // Read DateTime
+                        result.Graduated = reader.ReadDateValue();
+                        continue;
+
+                    case "Name": // Read String
+                        result.Name = reader.ReadStringValue();
+                        continue;
+                }
+            }
+
+            reader.ReadEndObject();
+
+            return result;
+        }
+
+        #endregion
+
         public DeserializerNode(Type type)
         {
+            // TODO - remove line:
+            _deserialize = DeserializeTestItem;
+
             bool nullable = false;
 
             reprocess:
@@ -62,7 +113,7 @@ namespace ArgoJson
 
             }
 
-            _deserialize = (reader) => null;
+            //_deserialize = (reader) => null;
         }
 
         #endregion
