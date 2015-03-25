@@ -18,11 +18,9 @@ namespace ArgoJson
 
         private readonly char[] _buffer;
 
-        private int _step = 0;
+        private readonly char[] _overflow;
 
-        private int _index = 0;
-
-        private bool _atEnd = false;
+        private int _max = 0, _index = 0;
 
         #endregion
         
@@ -30,29 +28,19 @@ namespace ArgoJson
 
         public JsonReader(TextReader reader)
         {
-            _reader = reader;
-            _buffer = new char[BUFFER_SIZE * 2];
+            _reader   = reader;
+            _buffer   = new char[BUFFER_SIZE];
+            _overflow = new char[BUFFER_SIZE];
         }
 
         #endregion
 
         #region Methods
 
-        /// <summary>
-        /// Ensures there is something in the buffer to read
-        /// </summary>
-        private void EnsureBuffer()
+        private void ReadNext()
         {
-            if (_atEnd) return;
-
-            _step    = (_step == 0 ? 1 : 0);
-            _index   = _step * BUFFER_SIZE;
-            int read = _reader.ReadBlock(_buffer,
-                _step * BUFFER_SIZE, BUFFER_SIZE) +
-                _step * BUFFER_SIZE;
-
-            if (read < BUFFER_SIZE)
-                _atEnd = true;
+            _index = 0;
+            _max   = _reader.Read(_buffer, 0, BUFFER_SIZE);
         }
 
         /// <summary>
@@ -60,9 +48,9 @@ namespace ArgoJson
         /// </summary>
         private void SkipWhitespace()
         {
-            _index = Array.IndexOf(_buffer, '{',
-                _step * BUFFER_SIZE + _index, BUFFER_SIZE) -
-                _step * BUFFER_SIZE + 1;
+            // Check if there is enough in the buffer
+            
+        
         }
 
         /// <summary>
@@ -70,11 +58,6 @@ namespace ArgoJson
         /// </summary>
         private void SkipPast(char value)
         {
-            EnsureBuffer();
-
-            _index = Array.IndexOf(_buffer, value,
-                _step * BUFFER_SIZE + _index, BUFFER_SIZE) -
-                _step * BUFFER_SIZE + 1;
         }
 
         /// <summary>
@@ -139,23 +122,13 @@ namespace ArgoJson
         }
 
         /// <summary>
-        /// Read a datetime value
-        /// </summary>
-        public DateTime? ReadDateValue()
-        {
-            DateTime result;
-            if (DateTime.TryParse(ReadStringValue(), out result))
-                return result;
-
-            return null;
-        }
-
-        /// <summary>
         /// Reads a string value
         /// </summary>
         public string ReadStringValue()
         {
             SkipPast('"');
+
+            // TODO - Read until end-quote, ignoring escape char + 1.
 
             return null;
         }
@@ -168,21 +141,34 @@ namespace ArgoJson
 
         #endregion
 
+        /// <summary>
+        /// Read to ',' or ']'
+        /// </summary>
+        /// <returns>True if it reads ',', false if ']'</returns>
         public bool ContinueArray()
         {
             return false;
         }
 
+        /// <summary>
+        /// Read to ']'
+        /// </summary>
         public void ReadEndArray()
         {
+            SkipPast(']');
         }
 
+        /// <summary>
+        /// Read to '}'
+        /// </summary>
         public void ReadEndObject()
         {
+            SkipPast('}');
         }
 
         public void Dispose()
         {
+            /* Do Nothing */
         }
 
         #endregion
