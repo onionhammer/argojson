@@ -40,6 +40,7 @@ namespace ArgoJson.Test
             };
 
             var serialized   = Serializer.Serialize(original);
+            //serialized = "{\"Id\":\"1adee806-f966-43b8-8c30-d0551d147460\",\"Name\":\"John Smith\",\"Graduated\":\"2000-03-28T00:00:00-06:00\"}";
             var deserialized = Deserializer.Deserialize<TestItem>(serialized);
             
             Assert.AreEqual(original, deserialized);

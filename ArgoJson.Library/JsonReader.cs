@@ -133,43 +133,24 @@ namespace ArgoJson
 
             while (true)
             {
-                // Find next '"'
-                var quoteIndex = Array.IndexOf(_buffer, '"', _index, _max - _index);
-                if (quoteIndex < 0) quoteIndex = _max;
+                ParsePast('"');
+                var len = _builder.Length;
 
-                while (true)
+                if (len > 1 &&
+                    _builder[len - 1] == '\\' &&
+                    _builder[len - 2] != '\\')
                 {
-                    var escapeIndex = Array.IndexOf(_buffer, '\\', _index, quoteIndex - _index);
-
-                    if (escapeIndex > -1)
-                    {
-                        // TODO - 
-                    }
+                    // The quote was escaped
+                    _builder.Append('"');
+                    continue;
                 }
-
-                // Iterate through escape chars in buffer
-                var remaining = quoteIndex - _index;
-                while (remaining > 0)
+                else
                 {
-                    var escapeChar = Array.IndexOf(_buffer, '\\', _index, remaining);
-                    if (escapeChar > 0)
-                    {
+                    var result = _builder.ToString();
 
-                    }
+                    // Unescape the result
+                    return Helpers.Unescape(result);
                 }
-
-                // Read data into builder
-                if (quoteIndex > -1)
-                {
-                    _builder.Append(_buffer, _index, quoteIndex - _index);
-                    _index = quoteIndex + 1;
-                    return _builder.ToString();
-                }
-
-                _builder.Append(_buffer, _index, _max - _index);
-
-                if (ReadNext() == false)
-                    return null;
             }
         }
 
@@ -219,9 +200,13 @@ namespace ArgoJson
         /// </summary>
         public bool ReadPropertyStart(out string property)
         {
+            // TODO: Handle 'false' case where there are no more properties
+            // before an ending '}'
+
             property = ReadStringValue();
             SkipPast(':');
-            return false;
+
+            return property != string.Empty;
         }
 
         /// <summary>

@@ -33,7 +33,7 @@ namespace ArgoJson
                     break;
 
                 destIndex = index + offset;
-                switch (result[destIndex])
+                switch (value[index])
                 {
                     case '\b': result[destIndex] = 'b'; break;
                     case '\f': result[destIndex] = 'f'; break;
@@ -43,7 +43,39 @@ namespace ArgoJson
                 }
 
                 result.Insert(index++ + offset++, '\\');
-            } while (index + offset < result.Length);
+            } while (index < value.Length);
+
+            return result.ToString();
+        }
+
+        public static string Unescape(string value)
+        {
+            var result = new StringBuilder(value);
+            var index  = 0;
+            var offset = 0;
+            int destIndex;
+
+            do
+            {
+                index = value.IndexOf('\\', index);
+
+                if (index < 0)
+                    break;
+
+                destIndex = index + offset;
+                result.Remove(destIndex, 1);
+
+                switch (value[++index])
+                {
+                    case 'b': result[destIndex] = '\b'; break;
+                    case 'f': result[destIndex] = '\f'; break;
+                    case 'n': result[destIndex] = '\n'; break;
+                    case 'r': result[destIndex] = '\r'; break;
+                    case 't': result[destIndex] = '\t'; break;
+                }
+
+                --offset;
+            } while (++index < value.Length);
 
             return result.ToString();
         }

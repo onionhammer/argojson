@@ -14,6 +14,10 @@ namespace ArgoJson.Test
             var escaped = Helpers.Escape(toEscape);
 
             Assert.AreEqual("hello\\nworld\\rthis\\tis\\n", escaped);
+
+            var unescaped = Helpers.Unescape(escaped);
+
+            Assert.AreEqual(toEscape, unescaped);
         }
     }
 }

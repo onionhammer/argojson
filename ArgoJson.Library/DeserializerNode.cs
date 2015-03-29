@@ -18,6 +18,15 @@ namespace ArgoJson
         public DateTime? Graduated { get; set; }
 
         //public TestItem Child { get; set; }
+
+        public override bool Equals(object obj)
+        {
+            var otherItem = obj as TestItem;
+
+            return this.Id == otherItem.Id 
+                && this.Name == otherItem.Name 
+                && this.Graduated == otherItem.Graduated;
+        }
     }
 
     internal struct DeserializerNode
