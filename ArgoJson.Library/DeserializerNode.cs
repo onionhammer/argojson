@@ -79,7 +79,9 @@ namespace ArgoJson
                         continue;
 
                     case "Graduated": // Read DateTime
-                        result.Graduated = reader.ReadDateValue();
+                        DateTime value2;
+                        if (reader.ReadDateValue(out value2))
+                            result.Graduated = value2;
                         continue;
 
                     case "Name": // Read String

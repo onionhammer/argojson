@@ -12,13 +12,13 @@ namespace ArgoJson
     {
         #region Fields
 
-        const int BUFFER_SIZE = 4096;
+        const int BUFFER_SIZE = 5;// 4096;
 
         private readonly TextReader _reader;
 
-        private readonly char[] _buffer;
+        private readonly StringBuilder _builder;
 
-        private readonly char[] _overflow;
+        private readonly char[] _buffer;
 
         private int _max = 0, _index = 0;
 
@@ -28,37 +28,82 @@ namespace ArgoJson
 
         public JsonReader(TextReader reader)
         {
-            _reader   = reader;
-            _buffer   = new char[BUFFER_SIZE];
-            _overflow = new char[BUFFER_SIZE];
+            _reader  = reader;
+            _buffer  = new char[BUFFER_SIZE];
+            _builder = new StringBuilder(BUFFER_SIZE);
+
+            ReadNext();
         }
 
         #endregion
 
         #region Methods
 
-        private void ReadNext()
+        private bool ReadNext()
         {
             _index = 0;
             _max   = _reader.Read(_buffer, 0, BUFFER_SIZE);
+
+            return _max > 0;
         }
 
         /// <summary>
-        /// Skips any leading whitespace
+        /// Skip reading until the stopping char is found, then read past that.
+        /// </summary>
+        private void SkipPast(char stoppingChar)
+        {
+            while (true)
+            {
+                var match = Array.IndexOf(_buffer, stoppingChar, _index, _max - _index);
+
+                if (match > -1)
+                {
+                    _index = match + 1;
+                    return;
+                }
+                
+                if (ReadNext() == false)
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// Read all until there is a stopping character, then skip past that
+        /// </summary>
+        private void ParsePast(char stoppingChar)
+        {
+            while (true)
+            {
+                var match = Array.IndexOf(_buffer, stoppingChar, _index, _max - _index);
+
+                // Read data into builder
+                if (match > -1)
+                {
+                    _builder.Append(_buffer, _index, match - _index);
+                    _index = match + 1;
+                    return;
+                }
+
+                _builder.Append(_buffer, _index, _max - _index);
+                
+                if (ReadNext() == false)
+                    return;
+            }
+        }
+
+
+        /// <summary>
+        /// Skip until there is a non-whitespace character
         /// </summary>
         private void SkipWhitespace()
         {
             // Check if there is enough in the buffer
+            //Char.IsWhiteSpace()
             
         
         }
 
-        /// <summary>
-        /// Skips to and past (by 1) the character specified
-        /// </summary>
-        private void SkipPast(char value)
-        {
-        }
+        #region Public Methods
 
         /// <summary>
         /// Read to '{'
@@ -76,17 +121,57 @@ namespace ArgoJson
             SkipPast('[');
         }
 
-        /// <summary>
-        /// Read a string and skip past ":" and any whitespace
-        /// </summary>
-        public bool ReadPropertyStart(out string property)
-        {
-            property = ReadStringValue();
-            SkipPast(':');
-            return false;
-        }
-
         #region Value Methods
+
+        /// <summary>
+        /// Reads a string value
+        /// </summary>
+        public string ReadStringValue()
+        {
+            SkipPast('"');
+            _builder.Clear();
+
+            while (true)
+            {
+                // Find next '"'
+                var quoteIndex = Array.IndexOf(_buffer, '"', _index, _max - _index);
+                if (quoteIndex < 0) quoteIndex = _max;
+
+                while (true)
+                {
+                    var escapeIndex = Array.IndexOf(_buffer, '\\', _index, quoteIndex - _index);
+
+                    if (escapeIndex > -1)
+                    {
+                        // TODO - 
+                    }
+                }
+
+                // Iterate through escape chars in buffer
+                var remaining = quoteIndex - _index;
+                while (remaining > 0)
+                {
+                    var escapeChar = Array.IndexOf(_buffer, '\\', _index, remaining);
+                    if (escapeChar > 0)
+                    {
+
+                    }
+                }
+
+                // Read data into builder
+                if (quoteIndex > -1)
+                {
+                    _builder.Append(_buffer, _index, quoteIndex - _index);
+                    _index = quoteIndex + 1;
+                    return _builder.ToString();
+                }
+
+                _builder.Append(_buffer, _index, _max - _index);
+
+                if (ReadNext() == false)
+                    return null;
+            }
+        }
 
         /// <summary>
         /// Read a GUID value
@@ -121,18 +206,6 @@ namespace ArgoJson
                 return DateTime.TryParse(strValue, out value);
         }
 
-        /// <summary>
-        /// Reads a string value
-        /// </summary>
-        public string ReadStringValue()
-        {
-            SkipPast('"');
-
-            // TODO - Read until end-quote, ignoring escape char + 1.
-
-            return null;
-        }
-
         // TODO:
         //ReadInt()
         //ReadLong()
@@ -140,6 +213,16 @@ namespace ArgoJson
         //ReadDouble()
 
         #endregion
+
+        /// <summary>
+        /// Read a string and skip past ":" and any whitespace
+        /// </summary>
+        public bool ReadPropertyStart(out string property)
+        {
+            property = ReadStringValue();
+            SkipPast(':');
+            return false;
+        }
 
         /// <summary>
         /// Read to ',' or ']'
@@ -166,12 +249,16 @@ namespace ArgoJson
             SkipPast('}');
         }
 
+        /// <summary>
+        /// Dispose underlying reader
+        /// </summary>
         public void Dispose()
         {
-            /* Do Nothing */
+            _reader.Dispose();
         }
 
         #endregion
 
+        #endregion
     }
 }
