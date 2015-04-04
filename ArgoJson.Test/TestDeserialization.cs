@@ -31,7 +31,7 @@ namespace ArgoJson.Test
                 Id              = Guid.NewGuid(),
                 Graduated       = DateTime.Today.AddYears(-15),
                 Name            = "John Smith",
-                Checkins        = null,//new[] { 0, 2, 4, 6 },
+                Checkins        = new[] { 0, 2, 4, 6 },
                 //Child         = new TestItem
                 //{
                 //    Id        = Guid.NewGuid(),
