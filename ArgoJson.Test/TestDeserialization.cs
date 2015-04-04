@@ -27,11 +27,12 @@ namespace ArgoJson.Test
         [TestMethod]
         public void TestTestItem()
         {
-            var original  = new TestItem {
-                Id        = Guid.NewGuid(),
-                Graduated = DateTime.Today.AddYears(-15),
-                Name      = "John Smith",
-                //Child     = new TestItem
+            var original        = new TestItem {
+                Id              = Guid.NewGuid(),
+                Graduated       = DateTime.Today.AddYears(-15),
+                Name            = "John Smith",
+                Checkins        = null,//new[] { 0, 2, 4, 6 },
+                //Child         = new TestItem
                 //{
                 //    Id        = Guid.NewGuid(),
                 //    Graduated = DateTime.Today.AddYears(-10),

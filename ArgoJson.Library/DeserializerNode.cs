@@ -1,16 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Linq.Expressions;
 using System.Reflection.Emit;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace ArgoJson
 {
     public class TestItem
     {
+        static bool ArraysEqual<T>(T[] a1, T[] a2)
+        {
+            if (ReferenceEquals(a1, a2))
+                return true;
+
+            if (a1 == null || a2 == null)
+                return false;
+
+            if (a1.Length != a2.Length)
+                return false;
+
+            var comparer = EqualityComparer<T>.Default;
+            for (int i = 0; i < a1.Length; i++)
+            {
+                if (!comparer.Equals(a1[i], a2[i])) return false;
+            }
+
+            return true;
+        }
+
         public Guid Id { get; set; }
 
         public string Name { get; set; }
@@ -19,13 +34,16 @@ namespace ArgoJson
 
         //public TestItem Child { get; set; }
 
+        public int[] Checkins { get; set; }
+
         public override bool Equals(object obj)
         {
             var otherItem = obj as TestItem;
 
             return this.Id == otherItem.Id 
                 && this.Name == otherItem.Name 
-                && this.Graduated == otherItem.Graduated;
+                && this.Graduated == otherItem.Graduated
+                && ArraysEqual(this.Checkins, otherItem.Checkins);
         }
     }
 
@@ -78,18 +96,20 @@ namespace ArgoJson
                 return null;
 
             string propertyName;
+            Guid value1;
+            DateTime value2;
+            int value3;
+
             while (reader.ReadPropertyStart(out propertyName))
             {
                 switch (propertyName)
                 {
                     case "Id": // Read GUID
-                        Guid value1;
                         if (reader.ReadGuidValue(out value1))
                             result.Id = value1;
                         continue;
 
                     case "Graduated": // Read DateTime
-                        DateTime value2;
                         if (reader.ReadDateValue(out value2))
                             result.Graduated = value2;
                         continue;
@@ -97,6 +117,23 @@ namespace ArgoJson
                     case "Name": // Read String
                         result.Name = reader.ReadStringValue();
                         continue;
+
+                    case "Checkins": // Read Array of Ints
+                        if (reader.ReadStartArray())
+                        {
+                            var items = new List<int>(capacity: 4);
+
+                            do
+                            {
+                                if (reader.ReadIntValue(out value3))
+                                    items.Add(value3);
+                            }
+                            while(reader.ContinueArray());
+
+                            result.Checkins = items.ToArray();
+                        }
+                        continue;
+
                 }
             }
 
