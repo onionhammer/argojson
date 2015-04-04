@@ -39,6 +39,31 @@ namespace ArgoJson
 
         #region Methods
 
+        private static char IndexOf(char[] buffer, char match, ref int index, int count)
+        {
+            for (int i = 0; i < count; ++index, ++i)
+            {
+                if (match == buffer[index])
+                    return match;
+            }
+
+            return '\0';
+        }
+
+        private static char IndexOfAny(char[] buffer, char match1, char match2, ref int index, int count)
+        {
+            for (int i = 0; i < count; ++index, ++i)
+            {
+                if (match1 == buffer[index])
+                    return match1;
+
+                if (match2 == buffer[index])
+                    return match2;
+            }
+
+            return '\0';
+        }
+
         private bool ReadNext()
         {
             _index = 0;
@@ -54,13 +79,10 @@ namespace ArgoJson
         {
             while (true)
             {
-                var match = Array.IndexOf(_buffer, stoppingChar, _index, _max - _index);
+                var match = IndexOf(_buffer, stoppingChar, ref _index, _max - _index);
 
-                if (match > -1)
-                {
-                    _index = match + 1;
+                if (match == stoppingChar)
                     return;
-                }
                 
                 if (ReadNext() == false)
                     return;
@@ -74,10 +96,10 @@ namespace ArgoJson
         {
             while (true)
             {
-                var match = Array.IndexOf(_buffer, stoppingChar, _index, _max - _index);
+                var match = IndexOf(_buffer, stoppingChar, ref _index, _max - _index);
 
                 // Read data into builder
-                if (match > -1)
+                if (match == stoppingChar)
                 {
                     _builder.Append(_buffer, _index, match - _index);
                     _index = match + 1;
@@ -108,17 +130,25 @@ namespace ArgoJson
         /// <summary>
         /// Read to '{'
         /// </summary>
-        public void ReadStartObject()
+        public bool ReadStartObject()
         {
+            // TODO - Check for 'null'
+
             SkipPast('{');
+
+            return true;
         }
 
         /// <summary>
         /// Read to '['
         /// </summary>
-        public void ReadStartArray()
+        public bool ReadStartArray()
         {
+            // TODO - Check for 'null'
+
             SkipPast('[');
+
+            return true;
         }
 
         #region Value Methods
@@ -128,6 +158,8 @@ namespace ArgoJson
         /// </summary>
         public string ReadStringValue()
         {
+            // TODO - Check for 'null'
+
             SkipPast('"');
             _builder.Clear();
 

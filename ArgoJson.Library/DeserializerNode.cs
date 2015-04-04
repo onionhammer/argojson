@@ -74,7 +74,8 @@ namespace ArgoJson
         {
             var result = new TestItem();
 
-            reader.ReadStartObject();
+            if (reader.ReadStartObject() == false)
+                return null;
 
             string propertyName;
             while (reader.ReadPropertyStart(out propertyName))
