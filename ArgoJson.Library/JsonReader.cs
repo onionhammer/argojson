@@ -340,13 +340,15 @@ namespace ArgoJson
         /// </summary>
         public bool ReadPropertyStart(out string property)
         {
-            // TODO: Handle 'false' case where there are no more properties
-            // before an ending '}'
-
             property = ReadStringValue();
-            SkipPast(':');
 
-            return property != string.Empty;
+            if (property != string.Empty)
+            {
+                SkipPast(':');
+                return true;
+            }
+         
+            return false;
         }
 
         /// <summary>
