@@ -1,10 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace ArgoJson
 {
@@ -57,7 +53,7 @@ namespace ArgoJson
                 if (match1 == buffer[index])
                     return match1;
 
-                if (match2 == buffer[index])
+                else if (match2 == buffer[index])
                     return match2;
             }
 
@@ -70,11 +66,11 @@ namespace ArgoJson
             {
                 if (match1 == buffer[index])
                     return match1;
-                if (match2 == buffer[index])
+                else if (match2 == buffer[index])
                     return match2;
-                if (match3 == buffer[index])
+                else if (match3 == buffer[index])
                     return match3;
-                if (match4 == buffer[index])
+                else if (match4 == buffer[index])
                     return match4;
             }
 
@@ -104,7 +100,7 @@ namespace ArgoJson
                     return match;
                 }
 
-                if (ReadNext() == false)
+                else if (ReadNext() == false)
                     return match;
             }
         }
@@ -124,7 +120,7 @@ namespace ArgoJson
                     return match;
                 }
 
-                if (ReadNext() == false)
+                else if (ReadNext() == false)
                     return match;
             }
         }
@@ -180,52 +176,18 @@ namespace ArgoJson
                         _builder.Append(_buffer, start, _max - start);
                         if (ReadNext() == false)
                             return false;
-                        continue;
+                        else continue;
                 }
             }
         }
 
-
-        /// <summary>
-        /// Skip until there is a non-whitespace character
-        /// </summary>
-        private void SkipWhitespace()
-        {
-            // Check if there is enough in the buffer
-            //Char.IsWhiteSpace()
-        }
-
         #region Public Methods
 
-        /// <summary>
-        /// Read to '{'
-        /// </summary>
-        public bool ReadStartObject()
-        {
-            // TODO - Check for 'null'
-
-            SkipPast('{', 'n');
-
-            return true;
-        }
+        #region Methods / Value Parsers
 
         /// <summary>
-        /// Read to '['
+        /// Skips past 'null'
         /// </summary>
-        public bool ReadStartArray()
-        {
-            // TODO - Check for 'null'
-
-            if (SkipPast('[', 'n') == 'n')
-            {
-                return false;
-            }
-
-            return true;
-        }
-
-        #region Value Methods
-
         public void SkipNullValue()
         {
             SkipPast('l');
@@ -239,8 +201,6 @@ namespace ArgoJson
         /// </summary>
         public string ReadStringValue()
         {
-            // TODO - Check for 'null'
-
             if (SkipPast('"', 'n') == 'n')
             {
                 SkipNullValue();
@@ -263,12 +223,8 @@ namespace ArgoJson
                     continue;
                 }
                 else
-                {
-                    var result = _builder.ToString();
-
                     // Unescape the result
-                    return Helpers.Unescape(result);
-                }
+                    return Helpers.Unescape(_builder.ToString());
             }
         }
 
@@ -319,12 +275,65 @@ namespace ArgoJson
             }
         }
 
-        // TODO:
-        //ReadLong()
-        //ReadFloat()
-        //ReadDouble()
+        public bool ReadLongValue(out long value)
+        {
+            _builder.Clear();
+
+            if (ParseToEnd())
+                return long.TryParse(_builder.ToString(), out value);
+            else
+            {
+                value = default(long);
+                SkipNullValue();
+                return false;
+            }
+        }
+
+        public bool ReadFloatValue(out float value)
+        {
+            _builder.Clear();
+
+            if (ParseToEnd())
+                return float.TryParse(_builder.ToString(), out value);
+            else
+            {
+                value = default(float);
+                SkipNullValue();
+                return false;
+            }
+        }
+
+        public bool ReadDoubleValue(out double value)
+        {
+            _builder.Clear();
+
+            if (ParseToEnd())
+                return double.TryParse(_builder.ToString(), out value);
+            else
+            {
+                value = default(double);
+                SkipNullValue();
+                return false;
+            }
+        }
 
         #endregion
+
+        /// <summary>
+        /// Read to '{'
+        /// </summary>
+        public bool ReadStartObject()
+        {
+            return SkipPast('{', 'n') != 'n';
+        }
+
+        /// <summary>
+        /// Read to '['
+        /// </summary>
+        public bool ReadStartArray()
+        {
+            return SkipPast('[', 'n') != 'n';
+        }
 
         /// <summary>
         /// Read a string and skip past ":" and any whitespace
@@ -352,7 +361,7 @@ namespace ArgoJson
         /// <summary>
         /// Read to '}'
         /// </summary>
-        public void ReadEndObject()
+        public void SkipEndObject()
         {
             SkipPast('}');
         }

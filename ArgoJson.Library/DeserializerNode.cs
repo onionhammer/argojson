@@ -34,7 +34,7 @@ namespace ArgoJson
 
         //public TestItem Child { get; set; }
 
-        public int[] Checkins { get; set; }
+        public string[] Checkins { get; set; }
 
         public override bool Equals(object obj)
         {
@@ -98,7 +98,6 @@ namespace ArgoJson
             string propertyName;
             Guid value1;
             DateTime value2;
-            int value3;
 
             while (reader.ReadPropertyStart(out propertyName))
             {
@@ -121,12 +120,11 @@ namespace ArgoJson
                     case "Checkins": // Read Array of Ints
                         if (reader.ReadStartArray())
                         {
-                            var items = new List<int>(capacity: 4);
+                            var items = new List<string>(capacity: 4);
 
                             do
                             {
-                                if (reader.ReadIntValue(out value3))
-                                    items.Add(value3);
+                                items.Add(reader.ReadStringValue());
                             }
                             while(reader.ContinueArray());
 
@@ -137,7 +135,7 @@ namespace ArgoJson
                 }
             }
 
-            reader.ReadEndObject();
+            reader.SkipEndObject();
 
             return result;
         }
