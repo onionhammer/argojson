@@ -90,14 +90,14 @@ namespace ArgoJson
 
         static object DeserializeTestItem(JsonReader reader)
         {
-            var result = new TestItem();
-
             if (reader.ReadStartObject() == false)
                 return null;
 
             string propertyName;
             Guid value1;
             DateTime value2;
+
+            var result = new TestItem();
 
             while (reader.ReadPropertyStart(out propertyName))
             {
