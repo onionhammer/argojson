@@ -60,6 +60,21 @@ namespace ArgoJson
             return '\0';
         }
 
+        private static char IndexOf(char[] buffer, char match1, char match2, char match3, ref int index, int count)
+        {
+            for (int i = 0; i < count; ++index, ++i)
+            {
+                if (match1 == buffer[index])
+                    return match1;
+                else if (match2 == buffer[index])
+                    return match2;
+                else if (match3 == buffer[index])
+                    return match3;
+            }
+
+            return '\0';
+        }
+
         private static char IndexOf(char[] buffer, char match1, char match2, char match3, char match4, ref int index, int count)
         {
             for (int i = 0; i < count; ++index, ++i)
@@ -83,6 +98,26 @@ namespace ArgoJson
             _max   = _reader.Read(_buffer, 0, BUFFER_SIZE);
 
             return _max > 0;
+        }
+
+        /// <summary>
+        /// Skip reading until the stopping char is found, then read past that.
+        /// </summary>
+        private char SkipPast(char stoppingChar, char exceptionChar1, char exceptionChar2)
+        {
+            while (true)
+            {
+                var match = IndexOf(_buffer, stoppingChar, exceptionChar1, exceptionChar2, ref _index, _max - _index);
+
+                if (match != '\0')
+                {
+                    ++_index;
+                    return match;
+                }
+
+                else if (ReadNext() == false)
+                    return match;
+            }
         }
 
         /// <summary>
@@ -124,6 +159,38 @@ namespace ArgoJson
                     return match;
             }
         }
+
+        /// <summary>
+        /// Skips whitespace
+        /// </summary>
+        private void SkipWhitespace()
+        {
+            while (true)
+            {
+                var count = _max - _index;
+
+                for (int i = 0; i < count; ++_index, ++i)
+                {
+                    if (Char.IsWhiteSpace(_buffer[_index]) == false)
+                        return;
+                }
+
+                if (ReadNext() == false)
+                    return;
+            }
+        }
+
+        /// <summary>
+        /// Peeks to see what the next character is, without advancing the cursor
+        /// </summary>
+        private char PeekNext()
+        {
+            if (_max == _index && ReadNext() == false)
+                return '\0';
+
+            return _buffer[_index];
+        }
+
 
         /// <summary>
         /// Read all until there is a stopping character, then skip past that
@@ -340,6 +407,15 @@ namespace ArgoJson
         /// </summary>
         public bool ReadPropertyStart(out string property)
         {
+            SkipWhitespace();
+
+            if (PeekNext() == '}')
+            {
+                property = null;
+                return false;
+            }
+
+            // Check object end
             property = ReadStringValue();
 
             if (property != string.Empty)

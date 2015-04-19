@@ -59,6 +59,27 @@ namespace ArgoJson.Console
                 };
         }
 
+        static string GetRandomSerialized()
+        {
+            const int SEED = 0x1e5;
+            const int LENGTH = 10000;
+
+            var rand = new Random(SEED);
+            var testItems = new List<TestItem>(capacity: LENGTH);
+            for (int i = 0; i < LENGTH; ++i)
+            {
+                testItems.Add(new TestItem
+                {
+                    Id        = rand.NextGuid(),
+                    Graduated = rand.NextDateTime(),
+                    Name      = rand.NextString(4, 14),
+                    Checkins  = new[] { rand.NextString(2, 10), rand.NextString(2, 10) }
+                });
+            }
+
+            return ArgoJson.Serializer.Serialize(testItems);
+        }
+
         #endregion
 
         #region ArgoJson
@@ -159,27 +180,49 @@ namespace ArgoJson.Console
 
         #endregion
 
+        #region Deserializers
+
+        private static string Data;
+
+        static void BenchArgoJsonDeserialize(ICollection<School> schools)
+        {
+            // Deserialize data
+            var deserialized = ArgoJson.Deserializer.DeserializeTests(Data);
+        }
+
+        static void BenchJSONDotNetDeserialize(ICollection<School> schools)
+        {
+            // Deserialize data
+            var deserialized = Newtonsoft.Json.JsonConvert.DeserializeObject<ICollection<School>>(Data);
+        }
+
+        #endregion
+
         static void Main(string[] args)
         {
+            // Generating deserliazation data
+            Data = GetRandomSerialized();
+
             System.Console.Write("Generating data... ");
             var allSchools = GetSchools().ToList();
             System.Console.WriteLine("Done.");
             
             // Serialize all data with JSON.NET
             Bench[] operations = {
-                BenchArgoJsonLarge,
-                BenchArgoJsonSmall,
                 BenchJSONDotNetLarge,
                 BenchJSONDotNetSmall,
+                BenchArgoJsonLarge,
+                BenchArgoJsonSmall,
                 BenchServiceStackLarge,
                 BenchServiceStackSmall,
                 BenchFastJsonLarge,
                 BenchFastJsonSmall,
                 // BenchDataContractLarge,
                 // BenchDataContractSmall
+                //BenchArgoJsonDeserialize,
+                //BenchJSONDotNetDeserialize
             };
 
-            GC.Collect();
             for (var i = 0; i < operations.Length; ++i)
             {
                 var operationName = operations[i].Method.Name;
@@ -190,8 +233,6 @@ namespace ArgoJson.Console
                     stopwatch.Start();
                     operations[i](allSchools);
                     stopwatch.Stop();
-
-                    GC.Collect();
                 }
 
                 System.Console.WriteLine("{0}s", 

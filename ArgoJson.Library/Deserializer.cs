@@ -38,6 +38,16 @@ namespace ArgoJson
                 return (T)node._deserialize(reader);
         }
 
+        public static ICollection<TestItem> DeserializeTests(string source)
+        {
+            DeserializerNode node;
+            DeserializerNode.GetHandler(typeof(ICollection<TestItem>), out node);
+
+            using (var sr     = new StringReader(source))
+            using (var reader = new JsonReader(sr))
+                return node._deserialize(reader) as ICollection<TestItem>;
+        }
+
         public static TestItem DeserializeTest(string source)
         {
             DeserializerNode node;

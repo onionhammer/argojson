@@ -140,12 +140,80 @@ namespace ArgoJson
             return result;
         }
 
+        static object DeserializeTestItems(JsonReader reader)
+        {
+            if (reader.ReadStartArray() == false)
+                return null;
+
+            var arrayResult = new List<TestItem>();
+
+            do
+            {
+                if (reader.ReadStartObject() == false)
+                {
+                    arrayResult.Add(null);
+                }
+                else
+                {
+                    string propertyName;
+                    Guid value1;
+                    DateTime value2;
+
+                    var result = new TestItem();
+
+                    while (reader.ReadPropertyStart(out propertyName))
+                    {
+                        switch (propertyName)
+                        {
+                            case "Id": // Read GUID
+                                if (reader.ReadGuidValue(out value1))
+                                    result.Id = value1;
+                                continue;
+
+                            case "Graduated": // Read DateTime
+                                if (reader.ReadDateValue(out value2))
+                                    result.Graduated = value2;
+                                continue;
+
+                            case "Name": // Read String
+                                result.Name = reader.ReadStringValue();
+                                continue;
+
+                            case "Checkins": // Read Array of Ints
+                                if (reader.ReadStartArray())
+                                {
+                                    var items = new List<string>(capacity: 4);
+
+                                    do
+                                    {
+                                        items.Add(reader.ReadStringValue());
+                                    }
+                                    while (reader.ContinueArray());
+
+                                    result.Checkins = items.ToArray();
+                                }
+                                continue;
+
+                        }
+                    }
+
+                    reader.SkipEndObject();
+
+                    arrayResult.Add(result);
+                }
+
+            } while (reader.ContinueArray());
+
+            return arrayResult;
+        }
+
         #endregion
 
         public DeserializerNode(Type type)
         {
             // TODO - remove line:
             _deserialize = DeserializeTestItem;
+//            _deserialize = DeserializeTestItems;
 
             bool nullable = false;
 
